@@ -20,9 +20,6 @@ const translations = {
         'full_name': 'Full Name',
         'student_id': 'Student ID',
         'email_address': 'Email Address',
-        'contact_number': 'Contact Number',
-        'course_program': 'Course/Program',
-        'year_level': 'Year Level',
         'change_photo': 'Change Photo',
         'notifications': 'Notifications',
         'email_notifications': 'Email Notifications',
@@ -118,9 +115,6 @@ const translations = {
         'full_name': 'Buong Pangalan',
         'student_id': 'ID ng Mag-aaral',
         'email_address': 'Email',
-        'contact_number': 'Numero ng Telepono',
-        'course_program': 'Kurso/Programa',
-        'year_level': 'Antas ng Taon',
         'change_photo': 'Palitan ang Larawan',
         'notifications': 'Mga Abiso',
         'email_notifications': 'Mga Abiso sa Email',
@@ -212,7 +206,6 @@ function t(key) {
 }
 
 function updateUIText() {
-    // Update elements with data-i18n attribute
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
@@ -223,7 +216,6 @@ function updateUIText() {
         }
     });
     
-    // Update year level options
     const yearSelect = document.getElementById('yearLevelDesktop');
     if (yearSelect) {
         const options = yearSelect.options;
@@ -233,7 +225,6 @@ function updateUIText() {
         }
     }
     
-    // Update mobile notification status
     const mobileNotifStatus = document.getElementById('mobileNotifStatus');
     if (mobileNotifStatus) {
         const saved = localStorage.getItem('student_notification_prefs');
@@ -241,13 +232,11 @@ function updateUIText() {
         mobileNotifStatus.textContent = (prefs.email || prefs.push) ? t('allowed') : t('disabled');
     }
     
-    // Update desktop language checkmarks
     const checkEnglish = document.getElementById('checkEnglishDesktop');
     const checkTagalog = document.getElementById('checkTagalogDesktop');
     if (checkEnglish) checkEnglish.style.display = currentLanguage === 'en' ? 'inline-block' : 'none';
     if (checkTagalog) checkTagalog.style.display = currentLanguage === 'tl' ? 'inline-block' : 'none';
     
-    // Update mobile checkmarks
     const checkEnglishMobile = document.getElementById('checkEnglishMobile');
     const checkFilipinoMobile = document.getElementById('checkFilipinoMobile');
     if (checkEnglishMobile) checkEnglishMobile.style.display = currentLanguage === 'en' ? 'block' : 'none';
@@ -259,9 +248,29 @@ function setLanguage(lang) {
     localStorage.setItem('student_language', lang);
     updateUIText();
     
-    // Update mobile language display
     const mobileLanguage = document.getElementById('mobileLanguage');
     if (mobileLanguage) mobileLanguage.textContent = lang === 'en' ? 'English' : 'Tagalog';
+}
+
+// ========== LOCK EMAIL FIELD (MAKE UNCHANGEABLE) ==========
+function lockEmailFields() {
+    const emailDesktop = document.getElementById('emailDesktop');
+    if (emailDesktop) {
+        emailDesktop.readOnly = true;
+        emailDesktop.disabled = true;
+        emailDesktop.style.backgroundColor = 'var(--bg)';
+        emailDesktop.style.cursor = 'not-allowed';
+        emailDesktop.style.opacity = '0.7';
+    }
+    
+    const emailMobile = document.getElementById('mobileEmailInput');
+    if (emailMobile) {
+        emailMobile.readOnly = true;
+        emailMobile.disabled = true;
+        emailMobile.style.backgroundColor = 'var(--bg)';
+        emailMobile.style.cursor = 'not-allowed';
+        emailMobile.style.opacity = '0.7';
+    }
 }
 
 // ========== DATABASE UPDATE FUNCTIONS ==========
@@ -270,8 +279,7 @@ async function updateStudentInDatabase(studentData) {
         const { data, error } = await supabase
             .from('student')
             .update({
-                full_name: studentData.full_name,
-                email: studentData.email
+                full_name: studentData.full_name
             })
             .eq('student_id', studentData.student_id)
             .select();
@@ -289,15 +297,12 @@ async function updateStudentInDatabase(studentData) {
     }
 }
 
-// Broadcast update to other tabs/windows
 function broadcastStudentUpdate(studentData) {
-    // Store update timestamp in localStorage for cross-tab sync
     localStorage.setItem('student_data_updated', JSON.stringify({
         timestamp: Date.now(),
         student: studentData
     }));
     
-    // Also try to send via postMessage if windows are open
     if (window.opener && !window.opener.closed) {
         try {
             window.opener.postMessage({
@@ -307,7 +312,6 @@ function broadcastStudentUpdate(studentData) {
         } catch(e) { console.log('Cannot send to opener'); }
     }
     
-    // Remove the storage trigger after a short delay
     setTimeout(() => localStorage.removeItem('student_data_updated'), 500);
 }
 
@@ -331,16 +335,14 @@ function loadStudentData() {
             if (studentIdDesktop) studentIdDesktop.value = currentStudent.studentId || 'N/A';
             
             const emailDesktop = document.getElementById('emailDesktop');
-            if (emailDesktop) emailDesktop.value = currentStudent.email || '';
-            
-            const phoneDesktop = document.getElementById('phoneDesktop');
-            if (phoneDesktop) phoneDesktop.value = currentStudent.phone || '';
-            
-            const courseDesktop = document.getElementById('courseDesktop');
-            if (courseDesktop) courseDesktop.value = currentStudent.course || '';
-            
-            const yearLevelDesktop = document.getElementById('yearLevelDesktop');
-            if (yearLevelDesktop) yearLevelDesktop.value = currentStudent.yearLevel || '1';
+            if (emailDesktop) {
+                emailDesktop.value = currentStudent.email || '';
+                emailDesktop.readOnly = true;
+                emailDesktop.disabled = true;
+                emailDesktop.style.backgroundColor = 'var(--bg)';
+                emailDesktop.style.cursor = 'not-allowed';
+                emailDesktop.style.opacity = '0.7';
+            }
             
             // Mobile
             const mobileName = document.getElementById('mobileName');
@@ -349,9 +351,6 @@ function loadStudentData() {
             const mobileEmail = document.getElementById('mobileEmail');
             if (mobileEmail) mobileEmail.textContent = currentStudent.email || 'student@campus.edu';
             
-            const mobileAccountSub = document.getElementById('mobileAccountSub');
-            if (mobileAccountSub) mobileAccountSub.textContent = currentStudent.name || 'Account';
-            
             const mobileFullNameInput = document.getElementById('mobileFullNameInput');
             if (mobileFullNameInput) mobileFullNameInput.value = currentStudent.name || '';
             
@@ -359,7 +358,14 @@ function loadStudentData() {
             if (mobileStudentIdInput) mobileStudentIdInput.value = currentStudent.studentId || 'N/A';
             
             const mobileEmailInput = document.getElementById('mobileEmailInput');
-            if (mobileEmailInput) mobileEmailInput.value = currentStudent.email || '';
+            if (mobileEmailInput) {
+                mobileEmailInput.value = currentStudent.email || '';
+                mobileEmailInput.readOnly = true;
+                mobileEmailInput.disabled = true;
+                mobileEmailInput.style.backgroundColor = 'var(--bg)';
+                mobileEmailInput.style.cursor = 'not-allowed';
+                mobileEmailInput.style.opacity = '0.7';
+            }
             
             const initial = (currentStudent.name || 'S').charAt(0).toUpperCase();
             const mobileAvatar = document.getElementById('mobileAvatar');
@@ -368,9 +374,57 @@ function loadStudentData() {
             loadProfileImage();
         } catch(e) { console.error(e); }
     }
+    
+    lockEmailFields();
 }
 
-// UPDATED: Mobile save profile with database sync
+// ========== PROFILE SAVE FUNCTIONS (NAME ONLY) ==========
+async function saveProfileDesktop() {
+    const newName = document.getElementById('fullNameDesktop')?.value;
+    if (!newName) {
+        showToast(t('enter_name'), 'error');
+        return;
+    }
+    
+    if (!currentStudent) {
+        showToast('Session expired. Please login again.', 'error');
+        return;
+    }
+    
+    const saveBtn = document.getElementById('saveProfileBtnDesktop');
+    const originalText = saveBtn?.textContent;
+    
+    if (saveBtn) {
+        saveBtn.textContent = t('sending') || 'Saving...';
+        saveBtn.disabled = true;
+    }
+    
+    try {
+        const result = await updateStudentInDatabase({
+            student_id: currentStudent.studentId,
+            full_name: newName
+        });
+        
+        if (result.success) {
+            currentStudent.name = newName;
+            localStorage.setItem('currentStudent', JSON.stringify(currentStudent));
+            loadStudentData();
+            broadcastStudentUpdate(currentStudent);
+            showToast(t('profile_updated'), 'success');
+        } else {
+            showToast('Failed to update: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Error saving profile:', error);
+        showToast('An error occurred. Please try again.', 'error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.textContent = originalText;
+            saveBtn.disabled = false;
+        }
+    }
+}
+
 async function saveProfileMobile() {
     const newName = document.getElementById('mobileFullNameInput').value;
     if (!newName) { 
@@ -392,24 +446,16 @@ async function saveProfileMobile() {
     }
     
     try {
-        // Update in database
         const result = await updateStudentInDatabase({
             student_id: currentStudent.studentId,
-            full_name: newName,
-            email: currentStudent.email
+            full_name: newName
         });
         
         if (result.success) {
-            // Update local storage
             currentStudent.name = newName;
             localStorage.setItem('currentStudent', JSON.stringify(currentStudent));
-            
-            // Reload UI
             loadStudentData();
-            
-            // Broadcast update to other tabs
             broadcastStudentUpdate(currentStudent);
-            
             showToast(t('profile_updated'), 'success');
             closeProfileModalMobile();
         } else {
@@ -440,7 +486,6 @@ function loadProfileImage() {
     }
 }
 
-// Avatar Upload
 function setupAvatarUpload() {
     const uploadBtn = document.getElementById('uploadBtnDesktop');
     const avatarInput = document.getElementById('avatarInputDesktop');
@@ -747,10 +792,10 @@ async function displayFeedbackHistoryDesktop() {
                                 <td style="padding: 12px;"><span class="badge feedback-cat-${f.category}" style="background: var(--primary-light); color: var(--primary); padding: 4px 10px; border-radius: 20px; font-size: 11px;">${t(f.category + '_feedback') || f.category}</span></td>
                                 <td style="padding: 12px;">${f.rating ? '⭐'.repeat(f.rating) : '—'}</td>
                                 <td style="padding: 12px;"><span class="feedback-status ${f.status || 'pending'}">${t(f.status || 'pending')}</span></td>
-                            </tr>
+                             </tr>
                         `).join('')}
                     </tbody>
-                </table>
+                 </table>
             </div>
             <div class="feedback-footer" style="margin-top: 16px; padding: 12px; background: var(--bg); border-radius: 12px; text-align: center;">
                 <small style="color: var(--muted);">${feedbacks.length} ${t('total_feedback') || 'total feedback entries'}</small>
@@ -815,7 +860,7 @@ function updateDarkModeIcons(isDark) {
 
 // ========== NAVIGATION ==========
 function goBack() {
-    window.location.href = '/Assets/Student_dashboard/SDB.html' + Date.now();;
+    window.location.href = '/Assets/Student_dashboard/SDB.html' + Date.now();
 }
 
 function confirmLogoutDesktop() {
@@ -850,63 +895,9 @@ function setupNavigation() {
     
     const saveProfileBtnDesktop = document.getElementById('saveProfileBtnDesktop');
     if (saveProfileBtnDesktop) {
-        // Remove old listeners and add new async handler
         const newSaveBtn = saveProfileBtnDesktop.cloneNode(true);
         saveProfileBtnDesktop.parentNode.replaceChild(newSaveBtn, saveProfileBtnDesktop);
-        
-        newSaveBtn.addEventListener('click', async () => {
-            const newName = document.getElementById('fullNameDesktop')?.value;
-            if (!newName) {
-                showToast(t('enter_name'), 'error');
-                return;
-            }
-            
-            if (!currentStudent) {
-                showToast('Session expired. Please login again.', 'error');
-                return;
-            }
-            
-            const originalText = newSaveBtn.textContent;
-            newSaveBtn.textContent = t('sending') || 'Saving...';
-            newSaveBtn.disabled = true;
-            
-            try {
-                // Update in database
-                const newEmail = document.getElementById('emailDesktop')?.value || currentStudent.email;
-                
-                const result = await updateStudentInDatabase({
-                    student_id: currentStudent.studentId,
-                    full_name: newName,
-                    email: newEmail
-                });
-                
-                if (result.success) {
-                    // Update local storage
-                    currentStudent.name = newName;
-                    currentStudent.email = newEmail;
-                    currentStudent.phone = document.getElementById('phoneDesktop')?.value || '';
-                    currentStudent.course = document.getElementById('courseDesktop')?.value || '';
-                    currentStudent.yearLevel = document.getElementById('yearLevelDesktop')?.value || '1';
-                    localStorage.setItem('currentStudent', JSON.stringify(currentStudent));
-                    
-                    // Reload UI
-                    loadStudentData();
-                    
-                    // Broadcast update to other tabs
-                    broadcastStudentUpdate(currentStudent);
-                    
-                    showToast(t('profile_updated'), 'success');
-                } else {
-                    showToast('Failed to update: ' + result.error, 'error');
-                }
-            } catch (error) {
-                console.error('Error saving profile:', error);
-                showToast('An error occurred. Please try again.', 'error');
-            } finally {
-                newSaveBtn.textContent = originalText;
-                newSaveBtn.disabled = false;
-            }
-        });
+        newSaveBtn.addEventListener('click', saveProfileDesktop);
     }
     
     const saveNotifBtnDesktop = document.getElementById('saveNotifBtnDesktop');
@@ -993,7 +984,6 @@ function closeFeedbackModalMobile() {
     }
 }
 
-// Setup cross-tab sync listener
 function setupCrossTabSync() {
     window.addEventListener('storage', (e) => {
         if (e.key === 'student_data_updated' && e.newValue) {
@@ -1012,7 +1002,6 @@ function setupCrossTabSync() {
         }
     });
     
-    // Also listen for page visibility (when tab becomes active)
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
             const stored = localStorage.getItem('currentStudent');
@@ -1186,15 +1175,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setupBottomNav();
     setupNotificationBell();
     initDarkMode();
-    setupCrossTabSync(); // Add cross-tab sync
+    setupCrossTabSync();
+    lockEmailFields();
     
-    // Setup desktop feedback button
     const sendFeedbackBtn = document.getElementById('sendFeedbackBtnDesktop');
     if (sendFeedbackBtn) {
         sendFeedbackBtn.addEventListener('click', sendFeedbackDesktop);
     }
     
-    // Setup desktop language buttons
     const englishBtn = document.getElementById('englishLangBtn');
     const tagalogBtn = document.getElementById('tagalogLangBtn');
     if (englishBtn) {
@@ -1204,6 +1192,5 @@ document.addEventListener('DOMContentLoaded', () => {
         tagalogBtn.addEventListener('click', () => selectLanguageDesktop('Filipino'));
     }
     
-    // Load feedback history
     displayFeedbackHistoryDesktop();
 });

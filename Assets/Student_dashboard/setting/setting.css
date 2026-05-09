@@ -16,6 +16,7 @@
     --drawer-bg: #FFFFFF;
     --sidebar-width: 280px;
     --bottom-nav-height: 65px;
+    --card-gap: 38px;
 }
 
 body.dark-mode {
@@ -152,18 +153,6 @@ body.dark-mode .drawer-header {
     padding: 4px 12px;
     border-radius: 20px;
     font-weight: 500;
-}
-
-.drawer-student-id {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.7);
-    margin-top: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-family: 'DM Mono', monospace;
-    letter-spacing: 0.5px;
 }
 
 .drawer-nav {
@@ -575,14 +564,18 @@ body.dark-mode .brand-name {
 .page-title { font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .page-sub { font-size: 14px; color: var(--muted); }
 
-/* Settings Cards */
+/* Settings Cards - WITH GAPS */
 .settings-card {
     background: var(--surface);
     border-radius: 24px;
     border: 1px solid var(--border);
-    margin-bottom: 28px;
+    margin-bottom: var(--card-gap);
     overflow: hidden;
     transition: all 0.2s;
+}
+
+.settings-card:last-child {
+    margin-bottom: 0;
 }
 
 .settings-card:hover {
@@ -961,13 +954,17 @@ body.dark-mode .alert.error { background: #7F1D1D; color: #FCA5A5; }
     display: inline-block;
 }
 
-/* Mobile Settings Section */
+/* Mobile Settings Section - WITH GAPS */
 .mobile-settings-section {
     background: var(--surface);
     border-radius: 20px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     overflow: hidden;
     border: 1px solid var(--border);
+}
+
+.mobile-settings-section:last-child {
+    margin-bottom: 0;
 }
 
 .mobile-section-header {
@@ -1270,6 +1267,104 @@ input:checked + .mobile-toggle-slider:before {
 .avatar-option-btn:hover {
     background: var(--primary-light);
     border-color: var(--primary);
+}
+
+/* Feedback History Container */
+.feedback-history-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.feedback-card {
+    background: var(--bg);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+}
+
+.feedback-card:hover {
+    transform: translateX(4px);
+    border-color: var(--primary);
+}
+
+.feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.feedback-rating {
+    font-size: 14px;
+    letter-spacing: 2px;
+}
+
+.feedback-category {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.feedback-text {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.feedback-date {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.feedback-status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.feedback-status.pending {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+.feedback-status.reviewed {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.feedback-status.resolved {
+    background: #DBEAFE;
+    color: #1D4ED8;
+}
+
+.feedback-loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+}
+
+.feedback-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+}
+
+.feedback-empty i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
 }
 
 /* ========== RESPONSIVE BREAKPOINTS ========== */
