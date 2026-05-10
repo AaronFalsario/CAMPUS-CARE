@@ -79,7 +79,7 @@ const translations = {
         'total campus reports': 'Total Campus Reports', 'all reports': 'All Reports',
         'security': 'Security', 'maintenance': 'Maintenance',
         'janitorial': 'Janitorial', 'facilities': 'Facilities',
-        'view my reports': 'View My Reports', 'your report': 'Your Report',
+        'view my reports': 'My Reports', 'your report': 'Your Report',
         'by': 'By', 'sensitive report': '🔒 Sensitive report - details restricted to security personnel',
         'reported by you': 'Reported by you', 'reported by': 'Reported by',
         'restricted': '🔒 Restricted', 'confidential reporter': '🔒 Confidential Reporter',
@@ -1131,7 +1131,7 @@ function addDrawerStyles() {
         .filter-chip.active { background: #2563EB; color: white; }
         .incident-card { transition: transform 0.2s ease, box-shadow 0.2s ease; cursor: pointer; }
         .incident-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
-        .location-restricted { color: #DC2626; font-weight: 500; }
+        .location-restricted { color: var(--muted); font-weight: 500; }
     `;
     document.head.appendChild(style);
 }

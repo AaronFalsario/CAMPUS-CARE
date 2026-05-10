@@ -339,19 +339,21 @@ body.dark-mode .dark-mode-toggle .moon-icon { display: block; }
 /* Notification Dropdown */
 .notification-dropdown {
     position: fixed;
-    width: 360px;
+    width: 340px;
     max-width: calc(100vw - 20px);
     background: var(--surface);
     border-radius: 16px;
     box-shadow: 0 10px 40px var(--shadow-lg);
-    z-index: 100000;
+    z-index: 2500;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+    transform: translateY(-10px) scale(0.95);
+    transition: all 0.2s ease;
     border: 1px solid var(--border);
     overflow: hidden;
+    top: 65px;
+    right: 15px;
 }
-
 .notification-dropdown.show {
     opacity: 1;
     visibility: visible;
@@ -360,7 +362,7 @@ body.dark-mode .dark-mode-toggle .moon-icon { display: block; }
 @media (min-width: 769px) {
     .notification-dropdown {
         top: 70px;
-        right: 20px;
+        right: 70px;  
         transform: translateY(-10px);
     }
     .notification-dropdown.show {
@@ -370,11 +372,13 @@ body.dark-mode .dark-mode-toggle .moon-icon { display: block; }
 
 @media (max-width: 768px) {
     .notification-dropdown {
+        position: fixed;
         top: 60px;
-        left: 50%;
-        right: auto;
-        width: calc(100vw - 32px);
-        transform: translateX(-50%) translateY(-10px);
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: none !important;
     }
     .notification-dropdown.show {
         transform: translateX(-50%) translateY(0);

@@ -1085,10 +1085,6 @@ styleElem.textContent = `
 `;
 document.head.appendChild(styleElem);
 
-// ============ SUPABASE REALTIME — enable notifications table ==========
-// This must be enabled in Supabase Dashboard → Database → Replication
-// for the 'notifications' table, otherwise students won't receive updates.
-
 // ============ INITIALIZATION ==========
 async function init() {
     console.log('🚀 Initializing Admin Dashboard...');
