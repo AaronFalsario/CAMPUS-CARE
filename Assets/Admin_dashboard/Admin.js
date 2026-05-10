@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Use environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -15,7 +14,6 @@ let isInitialLoad = true;
 let pollingInterval = null;
 let isSavingToStorage = false;
 
-// AUTO-DELETE RESOLVED INCIDENTS AFTER 24 HOURS
 const RESOLVED_RETENTION_HOURS = 24;
 
 // ============ NOTIFICATION SYSTEM ==========
@@ -24,13 +22,11 @@ let notificationIdCounter = 0;
 let isNotificationDropdownOpen = false;
 let lastUrgentTime = 0;
 
-// Detect if device is mobile/tablet
 function isMobileOrTablet() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Tablet|iPad|Android(?!.*Mobile)/i.test(navigator.userAgent) || 
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Tablet|iPad|Android(?!.*Mobile)/i.test(navigator.userAgent) ||
            (window.innerWidth <= 1024);
 }
 
-// Load notifications from localStorage
 function loadNotifications() {
     const stored = localStorage.getItem('admin_notifications');
     if (stored) {
@@ -49,10 +45,49 @@ function loadNotifications() {
     updateNotificationDropdown();
 }
 
-// Save notifications to localStorage
 function saveNotifications() {
     localStorage.setItem('admin_notifications', JSON.stringify(notifications));
     updateNotificationBadge();
+}
+
+// ============================================================
+// SUPABASE NOTIFICATIONS TABLE INTEGRATION
+// This is the KEY fix — admin now writes to the notifications
+// table so students can receive real-time notifications.
+// ============================================================
+
+/**
+ * Inserts a notification row into Supabase notifications table.
+ * The student dashboard listens to this table via Realtime and
+ * fires a native browser notification when a new row appears.
+ *
+ * @param {string} title   - Short title shown in the notification
+ * @param {string} message - Body text of the notification
+ * @param {string} type    - 'info' | 'warning' | 'urgent' (matches your DB default 'info')
+ * @param {string|null} relatedId - The incident UUID this notification is about
+ */
+async function pushNotificationToStudents(title, message, type = 'info', relatedId = null) {
+    try {
+        const { error } = await supabase
+            .from('notifications')
+            .insert({
+                admin_id: currentAdmin?.id || null,
+                title: title,
+                message: message,
+                type: type,
+                is_read: false,
+                related_id: relatedId || null
+                // created_at and id are auto-filled by Supabase defaults
+            });
+
+        if (error) {
+            console.error('❌ Failed to push notification to Supabase:', error);
+        } else {
+            console.log('✅ Notification pushed to Supabase notifications table:', title);
+        }
+    } catch (err) {
+        console.error('❌ Error pushing notification:', err);
+    }
 }
 
 // ========== REQUEST NOTIFICATION PERMISSION ==========
@@ -61,7 +96,6 @@ async function requestNotificationPermission() {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             console.log('✅ Notification permission granted');
-            // Show test notification for mobile/tablet
             if (isMobileOrTablet()) {
                 setTimeout(() => {
                     new Notification('Campus Care Admin', {
@@ -74,7 +108,6 @@ async function requestNotificationPermission() {
             }
         } else {
             console.log('❌ Notification permission denied');
-            // For mobile/tablet, show an alert to inform user
             if (isMobileOrTablet() && permission !== 'denied') {
                 showMobileNotificationPrompt();
             }
@@ -87,7 +120,6 @@ async function requestNotificationPermission() {
     }
 }
 
-// Show mobile-specific notification prompt
 function showMobileNotificationPrompt() {
     const promptDiv = document.createElement('div');
     promptDiv.style.cssText = `
@@ -117,27 +149,20 @@ function showMobileNotificationPrompt() {
         </div>
     `;
     document.body.appendChild(promptDiv);
-    
-    document.getElementById('enableNotifBtn')?.addEventListener('click', () => {
-        Notification.requestPermission();
-        promptDiv.remove();
-    });
+    document.getElementById('enableNotifBtn')?.addEventListener('click', () => { Notification.requestPermission(); promptDiv.remove(); });
     document.getElementById('dismissNotifBtn')?.addEventListener('click', () => promptDiv.remove());
-    
     setTimeout(() => promptDiv.remove(), 10000);
 }
 
-// Show mobile fallback notification (modal-style)
 function showMobileFallbackNotification(incident) {
     const isUrgent = incident && (incident.priority === 'high' || incident.priority === 'urgent' || incident.category === 'security');
-    
     const notificationDiv = document.createElement('div');
     notificationDiv.style.cssText = `
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
-        background: ${isUrgent ? 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)' : 'linear-gradient(135deg, #1D9E75 0%, #085041 100%)'};
+        background: ${isUrgent ? '#DC2626' : '#1D9E75'};
         color: white;
         padding: 16px;
         z-index: 10001;
@@ -145,7 +170,6 @@ function showMobileFallbackNotification(incident) {
         box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         cursor: pointer;
     `;
-    
     if (incident) {
         notificationDiv.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -162,89 +186,25 @@ function showMobileFallbackNotification(incident) {
         notificationDiv.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
                 <span style="font-size: 24px;">🔔</span>
-                <div style="flex: 1;">
-                    <div style="font-weight: bold;">Campus Care Alert</div>
-                    <div style="font-size: 13px;">New incident reported</div>
-                </div>
+                <div style="flex: 1;"><div style="font-weight: bold;">Campus Care Alert</div><div style="font-size: 13px;">New incident reported</div></div>
                 <button style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 20px;">View</button>
             </div>
         `;
     }
-    
-    notificationDiv.onclick = () => {
-        notificationDiv.remove();
-        if (incident) {
-            window.openModal(incident.id);
-        }
-        window.focus();
-    };
-    
+    notificationDiv.onclick = () => { notificationDiv.remove(); if (incident) window.openModal(incident.id); window.focus(); };
     document.body.appendChild(notificationDiv);
-    
-    // Auto-remove after 8 seconds
-    setTimeout(() => {
-        if (notificationDiv && notificationDiv.remove) notificationDiv.remove();
-    }, 8000);
-    
-    // Vibrate for mobile
-    if (isUrgent && navigator.vibrate) {
-        navigator.vibrate([500, 200, 500]);
-    }
-}
-
-// ========== SEND PUSH NOTIFICATION (FIXED FOR TABLET) ==========
-function sendMobileNotification(title, body, isUrgent = false) {
-    console.log(`📱 Sending notification - Title: ${title}, Urgent: ${isUrgent}, Device: ${isMobileOrTablet() ? 'Mobile/Tablet' : 'Desktop'}`);
-    
-    // For mobile/tablet, use the fallback modal notification if browser notifications aren't working
-    if (isMobileOrTablet()) {
-        // Always show the fallback notification for mobile/tablet to ensure delivery
-        const incident = { 
-            name: title.replace('🚨 URGENT: ', '').replace('📋 ', ''), 
-            location: body.split('📍 Location: ')[1]?.split('\n')[0] || 'Unknown',
-            priority: isUrgent ? 'high' : 'medium',
-            id: Date.now()
-        };
-        showMobileFallbackNotification(incident);
-        
-        // Also try browser notification if permitted
-        if ('Notification' in window && Notification.permission === 'granted') {
-            sendBrowserNotification(title, body, isUrgent);
-        }
-        
-        // Add to internal notification list
-        addInternalNotification(title, body, isUrgent);
-        
-        // Show toast
-        showToastMessage(body, isUrgent ? 'urgent' : 'info');
-        return;
-    }
-    
-    // Desktop - use browser notifications
-    sendBrowserNotification(title, body, isUrgent);
+    setTimeout(() => { if (notificationDiv?.remove) notificationDiv.remove(); }, 8000);
+    if (isUrgent && navigator.vibrate) navigator.vibrate([500, 200, 500]);
 }
 
 function sendBrowserNotification(title, body, isUrgent = false) {
-    if (!('Notification' in window)) {
-        console.log('This browser does not support notifications');
-        return;
-    }
-    
-    if (Notification.permission !== 'granted') {
-        console.log('Notification permission not granted');
-        return;
-    }
-    
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
     if (isUrgent) {
         const now = Date.now();
-        if (now - lastUrgentTime < 10000) {
-            console.log('Throttling urgent notification');
-            return;
-        }
+        if (now - lastUrgentTime < 10000) return;
         lastUrgentTime = now;
     }
-    
-    const notificationOptions = {
+    const notification = new Notification(title, {
         body: body,
         icon: '/Assets/Images/logo.png',
         badge: '/Assets/Images/logo.png',
@@ -253,86 +213,116 @@ function sendBrowserNotification(title, body, isUrgent = false) {
         requireInteraction: isUrgent,
         tag: `incident-${Date.now()}`,
         renotify: true
-    };
-    
-    if (isUrgent) {
-        notificationOptions.body = `🚨 URGENT: ${body}`;
-    }
-    
-    const notification = new Notification(title, notificationOptions);
-    
-    notification.onclick = function() {
-        window.focus();
-        notification.close();
-    };
-    
-    setTimeout(() => {
-        notification.close();
-    }, isUrgent ? 30000 : 10000);
+    });
+    notification.onclick = () => { window.focus(); notification.close(); };
+    setTimeout(() => notification.close(), isUrgent ? 30000 : 10000);
 }
 
-// ========== CHECK FOR URGENT REPORT (FIXED) ==========
-function checkForUrgentReport(incident) {
-    console.log('🔔 Checking for urgent report:', incident);
-    
-    if (!incident) {
-        console.log('No incident provided');
+function sendMobileNotification(title, body, isUrgent = false) {
+    if (isMobileOrTablet()) {
+        const incident = {
+            name: title.replace('🚨 URGENT: ', '').replace('📋 ', ''),
+            location: body.split('📍 Location: ')[1]?.split('\n')[0] || 'Unknown',
+            priority: isUrgent ? 'high' : 'medium',
+            id: Date.now()
+        };
+        showMobileFallbackNotification(incident);
+        if ('Notification' in window && Notification.permission === 'granted') {
+            sendBrowserNotification(title, body, isUrgent);
+        }
+        addInternalNotification(title, body, isUrgent);
+        showToastMessage(body, isUrgent ? 'urgent' : 'info');
         return;
     }
-    
-    const isUrgent = incident.priority === 'high' || 
-                    incident.priority === 'urgent' ||
-                    incident.category === 'security';
-    
+    sendBrowserNotification(title, body, isUrgent);
+}
+
+// ============================================================
+// UPDATED checkForUrgentReport
+// Now also pushes to Supabase notifications table so students
+// receive real-time native notifications via SDB.js listener.
+// ============================================================
+function checkForUrgentReport(incident) {
+    console.log('🔔 Checking for urgent report:', incident);
+    if (!incident) return;
+
+    const isUrgent = incident.priority === 'high' ||
+                     incident.priority === 'urgent' ||
+                     incident.category === 'security';
+
     const notificationTitle = isUrgent ? '🚨 URGENT INCIDENT REPORTED' : '📋 New Incident Reported';
     const notificationBody = `${incident.name || incident.title}\n📍 Location: ${incident.location}\n⚠️ Priority: ${(incident.priority || 'medium').toUpperCase()}`;
-    
-    // ALWAYS add to internal notification list FIRST (works on all devices)
+
+    // 1. Add to admin's local notification panel
     addInternalNotification(
         isUrgent ? '🚨 Urgent Incident' : 'New Incident',
         `${incident.name || incident.title} at ${incident.location}`,
         isUrgent
     );
-    
-    // Show toast message (works on all devices)
+
+    // 2. Show admin-side toast
     showToastMessage(notificationBody, isUrgent ? 'urgent' : 'info');
-    
-    // Send notification based on device type
+
+    // 3. Show admin-side browser/mobile notification
     sendMobileNotification(notificationTitle, notificationBody, isUrgent);
-    
-    // Animate bell for urgent
+
+    // 4. ✅ KEY FIX: Push to Supabase notifications table
+    //    This triggers SDB.js Realtime listener on student dashboard
+    //    which then fires showNativePushNotification() for all students.
+    pushNotificationToStudents(
+        notificationTitle,
+        notificationBody,
+        isUrgent ? 'urgent' : 'info',
+        incident.id || null
+    );
+
+    // 5. Animate bell
     if (isUrgent) {
         const bell = document.getElementById('notificationBell');
         if (bell) {
             bell.classList.add('urgent');
             bell.style.animation = 'bellRing 0.5s ease infinite';
-            setTimeout(() => {
-                bell.classList.remove('urgent');
-                bell.style.animation = '';
-            }, 3000);
+            setTimeout(() => { bell.classList.remove('urgent'); bell.style.animation = ''; }, 3000);
         }
-        
-        // Update app badge count on supported browsers
         if ('setAppBadge' in navigator) {
             const unreadCount = notifications.filter(n => !n.read).length;
             navigator.setAppBadge(unreadCount + 1).catch(console.log);
         }
-        
-        // Play sound for urgent (optional)
-        try {
-            const audio = new Audio('data:audio/wav;base64,U3RlYWx0aCBzb3VuZA==');
-            audio.play().catch(() => console.log('Audio not supported'));
-        } catch(e) {}
     }
-    
-    // Force update notification dropdown immediately
+
     updateNotificationDropdown();
     updateNotificationBadge();
 }
 
+// ============================================================
+// ALSO push to Supabase when admin manually updates status
+// So students are notified when their report is resolved etc.
+// ============================================================
+async function notifyStudentOfStatusChange(incident, oldStatus, newStatus) {
+    if (!incident) return;
+
+    let title = 'Report Status Update';
+    let message = '';
+    let type = 'info';
+
+    if (newStatus === 'in-progress') {
+        message = `Your report "${incident.name}" at ${incident.location} is now being processed.`;
+        type = 'info';
+    } else if (newStatus === 'resolved') {
+        message = `Your report "${incident.name}" at ${incident.location} has been resolved!`;
+        type = 'info';
+    } else if (newStatus === 'pending') {
+        message = `Your report "${incident.name}" is pending review.`;
+        type = 'info';
+    }
+
+    if (message) {
+        await pushNotificationToStudents(title, message, type, incident.id || null);
+        console.log(`✅ Student notified of status change: ${oldStatus} → ${newStatus}`);
+    }
+}
+
 function addInternalNotification(title, message, isUrgent = false) {
-    console.log(`📝 Adding internal notification - Title: ${title}, Message: ${message}, Urgent: ${isUrgent}`);
-    
     const notification = {
         id: notificationIdCounter++,
         title: title,
@@ -342,14 +332,10 @@ function addInternalNotification(title, message, isUrgent = false) {
         isUrgent: isUrgent
     };
     notifications.unshift(notification);
-    
     if (notifications.length > 50) notifications = notifications.slice(0, 50);
-    
     saveNotifications();
     updateNotificationDropdown();
     updateNotificationBadge();
-    
-    console.log('✅ Notification added successfully. Total notifications:', notifications.length);
 }
 
 function updateNotificationBadge() {
@@ -361,11 +347,7 @@ function updateNotificationBadge() {
             badge.textContent = urgentCount > 0 ? `🔥${unreadCount}` : (unreadCount > 9 ? '9+' : unreadCount);
             badge.style.display = 'flex';
             badge.style.background = urgentCount > 0 ? '#DC2626' : 'var(--red)';
-            if (urgentCount > 0) {
-                badge.style.animation = 'pulse 0.5s ease infinite';
-            } else {
-                badge.style.animation = 'none';
-            }
+            badge.style.animation = urgentCount > 0 ? 'pulse 0.5s ease infinite' : 'none';
         } else {
             badge.style.display = 'none';
         }
@@ -375,7 +357,6 @@ function updateNotificationBadge() {
 function createNotificationDropdown() {
     let dropdown = document.getElementById('notificationDropdown');
     if (dropdown) dropdown.remove();
-    
     dropdown = document.createElement('div');
     dropdown.id = 'notificationDropdown';
     dropdown.className = 'notification-dropdown';
@@ -386,7 +367,6 @@ function createNotificationDropdown() {
 function updateNotificationDropdown() {
     let dropdown = document.getElementById('notificationDropdown');
     if (!dropdown) dropdown = createNotificationDropdown();
-    
     if (!notifications || notifications.length === 0) {
         dropdown.innerHTML = `
             <div class="notification-dropdown-header">
@@ -404,9 +384,7 @@ function updateNotificationDropdown() {
         `;
         return;
     }
-    
     const unreadCount = notifications.filter(n => !n.read).length;
-    
     dropdown.innerHTML = `
         <div class="notification-dropdown-header">
             <span>🔔 Notifications ${unreadCount > 0 ? `(${unreadCount})` : ''}</span>
@@ -427,11 +405,7 @@ function updateNotificationDropdown() {
 
 function toggleNotificationDropdown() {
     let dropdown = document.getElementById('notificationDropdown');
-    if (!dropdown) {
-        dropdown = createNotificationDropdown();
-        updateNotificationDropdown();
-    }
-    
+    if (!dropdown) { dropdown = createNotificationDropdown(); updateNotificationDropdown(); }
     if (isNotificationDropdownOpen) {
         dropdown.classList.remove('show');
         isNotificationDropdownOpen = false;
@@ -445,17 +419,13 @@ function toggleNotificationDropdown() {
         }
         dropdown.classList.add('show');
         isNotificationDropdownOpen = true;
-        
-        setTimeout(() => {
-            document.addEventListener('click', closeNotificationDropdownOutside);
-        }, 100);
+        setTimeout(() => { document.addEventListener('click', closeNotificationDropdownOutside); }, 100);
     }
 }
 
 function closeNotificationDropdownOutside(e) {
     const dropdown = document.getElementById('notificationDropdown');
     const bell = document.getElementById('notificationBell');
-    
     if (dropdown && bell && !dropdown.contains(e.target) && !bell.contains(e.target)) {
         dropdown.classList.remove('show');
         isNotificationDropdownOpen = false;
@@ -465,12 +435,7 @@ function closeNotificationDropdownOutside(e) {
 
 window.markNotificationRead = function(id) {
     const notif = notifications.find(n => n.id === id);
-    if (notif) {
-        notif.read = true;
-        saveNotifications();
-        updateNotificationDropdown();
-        updateNotificationBadge();
-    }
+    if (notif) { notif.read = true; saveNotifications(); updateNotificationDropdown(); updateNotificationBadge(); }
 };
 
 window.clearAllNotifications = function() {
@@ -496,7 +461,6 @@ function showToastMessage(message, type = 'success') {
         z-index: 10000;
         animation: slideIn 0.3s ease;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        font-family: 'Inter', sans-serif;
         font-weight: 500;
         max-width: 350px;
     `;
@@ -504,11 +468,10 @@ function showToastMessage(message, type = 'success') {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// ============ DARK MODE SYSTEM ==========
+// ============ DARK MODE ==========
 function initDarkMode() {
     const savedMode = localStorage.getItem('admin_dark_mode');
     const toggle = document.getElementById('darkModeToggle');
-    
     if (savedMode === 'enabled') {
         document.body.classList.add('dark-mode');
         if (toggle) {
@@ -518,7 +481,6 @@ function initDarkMode() {
             if (moonIcon) moonIcon.style.display = 'block';
         }
     }
-    
     if (toggle) {
         toggle.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
@@ -527,72 +489,47 @@ function initDarkMode() {
             const sunIcon = toggle.querySelector('.sun-icon');
             const moonIcon = toggle.querySelector('.moon-icon');
             if (sunIcon && moonIcon) {
-                if (isDark) {
-                    sunIcon.style.display = 'none';
-                    moonIcon.style.display = 'block';
-                } else {
-                    sunIcon.style.display = 'block';
-                    moonIcon.style.display = 'none';
-                }
+                sunIcon.style.display = isDark ? 'none' : 'block';
+                moonIcon.style.display = isDark ? 'block' : 'none';
             }
         });
     }
 }
 
-// ============ LOAD ADMIN INFO TO DRAWER ==========
+// ============ LOAD ADMIN INFO ==========
 function loadAdminToDrawer() {
     try {
         const storedAdmin = localStorage.getItem('currentAdmin');
         const isLoggedIn = localStorage.getItem('isAdminLoggedIn');
-        
-        if (!storedAdmin || isLoggedIn !== 'true') {
-            return;
-        }
-        
+        if (!storedAdmin || isLoggedIn !== 'true') return;
         currentAdmin = JSON.parse(storedAdmin);
         const adminName = currentAdmin.name || currentAdmin.email;
-        const adminInitials = adminName
-            .split(' ')
-            .map(n => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-        
+        const adminInitials = adminName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         const drawerName = document.getElementById('drawerAdminName');
         const drawerRole = document.getElementById('drawerAdminRole');
         const drawerInitials = document.getElementById('drawerInitials');
         const topAdminName = document.getElementById('topAdminName');
         const welcomeMessage = document.getElementById('welcomeMessage');
         const adminPill = document.getElementById('adminPill');
-        
         if (drawerName) drawerName.textContent = adminName;
         if (drawerRole) drawerRole.textContent = currentAdmin.role || 'Campus Care Admin';
         if (drawerInitials) drawerInitials.textContent = adminInitials;
         if (topAdminName) topAdminName.textContent = adminName.split(' ')[0] || 'Admin';
         if (adminPill) adminPill.textContent = adminName.split(' ')[0] || 'Admin';
         if (welcomeMessage) welcomeMessage.textContent = `Welcome back, ${adminName}! Manage incidents and monitor campus maintenance`;
-        
     } catch (error) {
         console.error('Error loading admin to drawer:', error);
     }
 }
 
-// ============ LOAD INCIDENTS FROM SUPABASE ==========
+// ============ LOAD INCIDENTS ==========
 async function loadIncidentsFromSupabase() {
     try {
-        console.log('Loading incidents from Supabase...');
-        
         const { data: incidents, error } = await supabase
             .from('incident')
             .select('*')
             .order('created_at', { ascending: false });
-        
-        if (error) {
-            console.error('Supabase error:', error);
-            loadFromLocalStorage();
-            return;
-        }
-        
+        if (error) { console.error('Supabase error:', error); loadFromLocalStorage(); return; }
         if (incidents && incidents.length > 0) {
             allIncidents = incidents.map(r => ({
                 id: r.id,
@@ -609,17 +546,12 @@ async function loadIncidentsFromSupabase() {
                 resolved_at: r.resolved_at || null,
                 is_anonymous: r.is_anonymous || false
             }));
-            
             saveToLocalStorage();
-            console.log(`✅ Loaded ${allIncidents.length} incidents from Supabase`);
         } else {
             allIncidents = [];
-            console.log('No incidents found in Supabase');
         }
-        
         await checkAndDeleteOldResolved();
         updateAll();
-        
     } catch (error) {
         console.error('Error loading from Supabase:', error);
         loadFromLocalStorage();
@@ -652,19 +584,16 @@ async function loadFromLocalStorage() {
     updateAll();
 }
 
-// ============ REAL-TIME SUBSCRIPTION (FIXED) ==========
+// ============ REAL-TIME SUBSCRIPTION ==========
 function setupRealtimeSubscription() {
     if (realtimeSubscription) return;
-    
     console.log('Setting up real-time subscription for incident table...');
-    
     realtimeSubscription = supabase
         .channel('incident-changes')
-        .on('postgres_changes', 
+        .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'incident' },
             (payload) => {
-                console.log('🆕 NEW INCIDENT INSERTED INSTANTLY!', payload.new);
-                
+                console.log('🆕 NEW INCIDENT INSERTED!', payload.new);
                 const newIncident = {
                     id: payload.new.id,
                     name: payload.new.title || 'Untitled',
@@ -679,37 +608,34 @@ function setupRealtimeSubscription() {
                     timestamp: new Date(payload.new.created_at),
                     is_anonymous: payload.new.is_anonymous || false
                 };
-                
-                // Send notification IMMEDIATELY (this will work on tablet)
+
+                // Fire admin notification + push to Supabase for students
                 checkForUrgentReport(newIncident);
-                
-                // Add to local array
+
                 allIncidents.unshift(newIncident);
-                
-                // Update UI immediately
                 updateAll();
-                
-                // Force notification dropdown refresh
-                setTimeout(() => {
-                    updateNotificationDropdown();
-                    updateNotificationBadge();
-                }, 100);
+                setTimeout(() => { updateNotificationDropdown(); updateNotificationBadge(); }, 100);
             }
         )
-        .on('postgres_changes', 
+        .on('postgres_changes',
             { event: 'UPDATE', schema: 'public', table: 'incident' },
             (payload) => {
-                console.log('🔄 Incident UPDATED instantly:', payload.new.id);
-                
+                console.log('🔄 Incident UPDATED:', payload.new.id);
                 if (payload.old?.status !== payload.new?.status) {
+                    const updatedIncident = {
+                        id: payload.new.id,
+                        name: payload.new.title,
+                        location: payload.new.location,
+                    };
+                    // Notify student of status change via Supabase
+                    notifyStudentOfStatusChange(updatedIncident, payload.old.status, payload.new.status);
                     addInternalNotification(
                         'Status Updated',
-                        `Incident "${payload.new?.title}" status changed from ${payload.old?.status} to ${payload.new?.status}`,
+                        `Incident "${payload.new?.title}" changed from ${payload.old?.status} to ${payload.new?.status}`,
                         false
                     );
                     showToastMessage(`Status updated to ${payload.new?.status}`, 'info');
                 }
-                
                 const index = allIncidents.findIndex(i => String(i.id) === String(payload.new.id));
                 if (index !== -1) {
                     allIncidents[index] = {
@@ -722,51 +648,39 @@ function setupRealtimeSubscription() {
                 }
             }
         )
-        .on('postgres_changes', 
+        .on('postgres_changes',
             { event: 'DELETE', schema: 'public', table: 'incident' },
             (payload) => {
-                console.log('🗑️ Incident DELETED instantly');
+                console.log('🗑️ Incident DELETED');
                 allIncidents = allIncidents.filter(i => String(i.id) !== String(payload.old.id));
                 updateAll();
-                addInternalNotification('Incident Deleted', `An incident has been removed from the system`, false);
+                addInternalNotification('Incident Deleted', 'An incident has been removed from the system', false);
                 showToastMessage('Incident deleted', 'info');
             }
         )
         .subscribe((status) => {
             console.log('Realtime subscription status:', status);
             if (status === 'SUBSCRIBED') {
-                console.log('%c✅ REAL-TIME ACTIVE! Notifications will appear instantly.', 'color: green; font-size: 14px; font-weight: bold');
+                console.log('%c✅ REAL-TIME ACTIVE!', 'color: green; font-size: 14px; font-weight: bold');
             } else if (status === 'CHANNEL_WAITING') {
-                console.log('%c⏳ Connecting to real-time...', 'color: orange; font-size: 14px');
                 startPollingFallback();
             }
         });
 }
 
-// ============ POLLING FALLBACK (if realtime fails) ==========
+// ============ POLLING FALLBACK ==========
 function startPollingFallback() {
     if (pollingInterval) return;
-    
     let lastKnownId = allIncidents.length > 0 ? allIncidents[0].id : null;
-    
-    console.log('Starting polling fallback (checks every 3 seconds)...');
-    
+    console.log('Starting polling fallback...');
     pollingInterval = setInterval(async () => {
         try {
             const { data, error } = await supabase
-                .from('incident')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(1);
-            
+                .from('incident').select('*').order('created_at', { ascending: false }).limit(1);
             if (error) throw error;
-            
             if (data && data.length > 0) {
                 const latest = data[0];
-                
                 if (lastKnownId !== latest.id) {
-                    console.log('🆕 Polling detected new incident!');
-                    
                     const newIncident = {
                         id: latest.id,
                         name: latest.title || 'Untitled',
@@ -781,7 +695,6 @@ function startPollingFallback() {
                         timestamp: new Date(latest.created_at),
                         is_anonymous: latest.is_anonymous || false
                     };
-                    
                     checkForUrgentReport(newIncident);
                     allIncidents.unshift(newIncident);
                     updateAll();
@@ -794,39 +707,14 @@ function startPollingFallback() {
     }, 3000);
 }
 
-function stopPollingFallback() {
-    if (pollingInterval) {
-        clearInterval(pollingInterval);
-        pollingInterval = null;
-        console.log('Polling fallback stopped');
-    }
-}
-
-// ============ UPDATE INCIDENT STATUS IN SUPABASE ==========
+// ============ UPDATE STATUS ==========
 async function updateIncidentStatus(incidentId, newStatus, resolvedAt = null) {
     try {
-        const updateData = {
-            status: newStatus,
-            updated_at: new Date().toISOString()
-        };
-        
-        if (resolvedAt) {
-            updateData.resolved_at = resolvedAt;
-        }
-        
-        const { error } = await supabase
-            .from('incident')
-            .update(updateData)
-            .eq('id', incidentId);
-        
-        if (error) {
-            console.error('Error updating status in Supabase:', error);
-            return false;
-        }
-        
-        console.log('✅ Status updated in Supabase:', newStatus);
+        const updateData = { status: newStatus, updated_at: new Date().toISOString() };
+        if (resolvedAt) updateData.resolved_at = resolvedAt;
+        const { error } = await supabase.from('incident').update(updateData).eq('id', incidentId);
+        if (error) { console.error('Error updating status:', error); return false; }
         return true;
-        
     } catch (error) {
         console.error('Error updating status:', error);
         return false;
@@ -836,25 +724,16 @@ async function updateIncidentStatus(incidentId, newStatus, resolvedAt = null) {
 function saveToLocalStorage() {
     isSavingToStorage = true;
     const toStore = allIncidents.map(i => ({
-        id: i.id,
-        title: i.name,
-        location: i.location,
-        category: i.category,
-        priority: i.priority,
-        status: i.status,
-        studentName: i.reporter,
-        description: i.description,
-        timestamp: i.timestamp,
-        imageUrl: i.image_url,
-        studentIdNumber: i.student_id,
-        resolved_at: i.resolved_at,
-        is_anonymous: i.is_anonymous
+        id: i.id, title: i.name, location: i.location, category: i.category,
+        priority: i.priority, status: i.status, studentName: i.reporter,
+        description: i.description, timestamp: i.timestamp, imageUrl: i.image_url,
+        studentIdNumber: i.student_id, resolved_at: i.resolved_at, is_anonymous: i.is_anonymous
     }));
     localStorage.setItem('campus_care_reports', JSON.stringify(toStore));
     setTimeout(() => { isSavingToStorage = false; }, 0);
 }
 
-// ============ AUTO-DELETE FUNCTIONS ==========
+// ============ AUTO-DELETE ==========
 async function checkAndDeleteOldResolved() {
     const now = new Date();
     const toDelete = [];
@@ -869,8 +748,7 @@ async function checkAndDeleteOldResolved() {
     if (toDelete.length === 0) return;
     for (const incident of toDelete) {
         const { error } = await supabase.from('incident').delete().eq('id', incident.id);
-        if (error) console.error(`Failed to delete incident ${incident.id}:`, error);
-        else addInternalNotification('Incident Auto-Deleted', `"${incident.name}" was automatically deleted after 24 hours.`, false);
+        if (!error) addInternalNotification('Incident Auto-Deleted', `"${incident.name}" was automatically deleted after 24 hours.`, false);
     }
     allIncidents = toKeep;
     saveToLocalStorage();
@@ -896,8 +774,8 @@ function updateStats() {
     if (activeReportsEl) activeReportsEl.textContent = active;
     if (resolvedRateEl) resolvedRateEl.textContent = rate + '%';
     if (avgResolutionEl) avgResolutionEl.textContent = total ? '42h' : '—';
-    const cats = { security:0, maintenance:0, janitorial:0, facilities:0 };
-    allIncidents.forEach(i => { if(cats[i.category] !== undefined) cats[i.category]++; });
+    const cats = { security: 0, maintenance: 0, janitorial: 0, facilities: 0 };
+    allIncidents.forEach(i => { if (cats[i.category] !== undefined) cats[i.category]++; });
     const securityEl = document.getElementById('securityCount');
     const maintenanceEl = document.getElementById('maintenanceCount');
     const janitorialEl = document.getElementById('janitorialCount');
@@ -909,8 +787,8 @@ function updateStats() {
 }
 
 function updateTopCategories() {
-    const cats = { security:0, maintenance:0, janitorial:0, facilities:0 };
-    allIncidents.forEach(i => { if(cats[i.category] !== undefined) cats[i.category]++; });
+    const cats = { security: 0, maintenance: 0, janitorial: 0, facilities: 0 };
+    allIncidents.forEach(i => { if (cats[i.category] !== undefined) cats[i.category]++; });
     const topSecurity = document.getElementById('topSecurity');
     const topMaintenance = document.getElementById('topMaintenance');
     const topJanitorial = document.getElementById('topJanitorial');
@@ -942,8 +820,24 @@ function updateChart() {
         if (incidentChart) incidentChart.destroy();
         incidentChart = new Chart(canvasCtx, {
             type: 'line',
-            data: { labels: months, datasets: [{ label: 'Incidents', data: chartData, borderColor: '#1D9E75', backgroundColor: 'rgba(29,158,117,0.1)', borderWidth: 2, fill: true, tension: 0.3, pointBackgroundColor: '#1D9E75', pointBorderColor: '#fff', pointBorderWidth: 2, pointRadius: 4 }] },
-            options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#E4E1DB' }, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Incidents', data: chartData,
+                    borderColor: '#1D9E75', backgroundColor: 'rgba(29,158,117,0.1)',
+                    borderWidth: 2, fill: true, tension: 0.3,
+                    pointBackgroundColor: '#1D9E75', pointBorderColor: '#fff',
+                    pointBorderWidth: 2, pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#E4E1DB' }, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                }
+            }
         });
     }
 }
@@ -964,15 +858,15 @@ function renderIncidents() {
         const categoryBg = `${categoryColor}15`;
         return `
             <tr data-id="${inc.id}">
-                <td><div style="display: flex; align-items: center; gap: 12px;"><div style="width: 44px; height: 44px; border-radius: 12px; background: ${categoryBg}; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">${getIcon(inc.category)}</div><div><strong style="color: var(--text); font-size: 14px; display: block; margin-bottom: 4px;">${escape(inc.name)}</strong><span style="font-size: 11px; color: var(--muted);">${escape(inc.location)}</span></div></div></td>
+                <td><div style="display:flex;align-items:center;gap:12px;"><div style="width:44px;height:44px;border-radius:12px;background:${categoryBg};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${getIcon(inc.category)}</div><div><strong style="color:var(--text);font-size:14px;display:block;margin-bottom:4px;">${escape(inc.name)}</strong><span style="font-size:11px;color:var(--muted);">${escape(inc.location)}</span></div></div></td>
                 <td><span class="badge b-${inc.category}">${inc.category}</span></td>
                 <td><span class="badge b-${inc.priority}">${inc.priority}</span></td>
                 <td><span class="badge b-${inc.status === 'in-progress' ? 'inprogress' : inc.status}">${inc.status}</span></td>
-                <td style="color: var(--text);">${inc.is_anonymous === true ? 'Anonymous' : escape(inc.reporter)}</td>
-                <td style="color: var(--text);">${inc.is_anonymous === true ? 'Hidden' : inc.student_id}</td>
-                <td style="color: var(--muted);">${getTimeAgo(inc.timestamp)}</td>
+                <td style="color:var(--text);">${inc.is_anonymous === true ? 'Anonymous' : escape(inc.reporter)}</td>
+                <td style="color:var(--text);">${inc.is_anonymous === true ? 'Hidden' : inc.student_id}</td>
+                <td style="color:var(--muted);">${getTimeAgo(inc.timestamp)}</td>
                 <td><div class="action-btns"><button class="action-btn" onclick="window.openModal('${inc.id}')">👁️</button></div></td>
-            </table>
+            </tr>
         `;
     }).join('');
 }
@@ -981,15 +875,20 @@ function renderMobileCards() {
     const container = document.getElementById('mobileCards');
     if (!container) return;
     const filtered = getFiltered();
-    if (filtered.length === 0) { container.innerHTML = `<div style="text-align: center; padding: 60px 20px; background: var(--surface); border-radius: 20px;"><div style="font-size: 48px; margin-bottom: 12px;">📭</div><p style="color: var(--text); font-weight: 500;">No incidents found</p><p style="color: var(--muted); font-size: 12px; margin-top: 4px;">All clear! No reports to display.</p></div>`; return; }
+    if (filtered.length === 0) { container.innerHTML = `<div style="text-align:center;padding:60px 20px;background:var(--surface);border-radius:20px;"><div style="font-size:48px;margin-bottom:12px;">📭</div><p style="color:var(--text);font-weight:500;">No incidents found</p></div>`; return; }
     container.innerHTML = filtered.map(inc => {
         const categoryColor = getCategoryColor(inc.category);
         const categoryBg = `${categoryColor}15`;
         const priorityClass = inc.priority === 'high' ? 'priority-high' : (inc.priority === 'medium' ? 'priority-medium' : 'priority-low');
         return `
             <div class="m-card ${priorityClass}" data-id="${inc.id}">
-                <div class="m-card-header"><div class="m-card-icon" style="background: ${categoryBg}; color: ${categoryColor};">${getIcon(inc.category)}</div><div class="m-card-info"><div class="m-card-title">${escape(inc.name)}</div><div class="m-card-location">${escape(inc.location)}</div></div></div>
-                <div class="m-card-body"><div class="m-card-field"><div class="m-field-label">📂 CATEGORY</div><div class="m-field-value"><span class="badge b-${inc.category}" style="background: ${categoryBg}; color: ${categoryColor};">${inc.category}</span></div></div><div class="m-card-field"><div class="m-field-label">⚡ PRIORITY</div><div class="m-field-value"><span class="badge b-${inc.priority}">${inc.priority}</span></div></div><div class="m-card-field"><div class="m-field-label">📌 STATUS</div><div class="m-field-value"><span class="badge b-${inc.status === 'in-progress' ? 'inprogress' : inc.status}">${inc.status}</span></div></div><div class="m-card-field"><div class="m-field-label">👤 REPORTER</div><div class="m-field-value">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</div></div></div>
+                <div class="m-card-header"><div class="m-card-icon" style="background:${categoryBg};color:${categoryColor};">${getIcon(inc.category)}</div><div class="m-card-info"><div class="m-card-title">${escape(inc.name)}</div><div class="m-card-location">${escape(inc.location)}</div></div></div>
+                <div class="m-card-body">
+                    <div class="m-card-field"><div class="m-field-label">📂 CATEGORY</div><div class="m-field-value"><span class="badge b-${inc.category}">${inc.category}</span></div></div>
+                    <div class="m-card-field"><div class="m-field-label">⚡ PRIORITY</div><div class="m-field-value"><span class="badge b-${inc.priority}">${inc.priority}</span></div></div>
+                    <div class="m-card-field"><div class="m-field-label">📌 STATUS</div><div class="m-field-value"><span class="badge b-${inc.status === 'in-progress' ? 'inprogress' : inc.status}">${inc.status}</span></div></div>
+                    <div class="m-card-field"><div class="m-field-label">👤 REPORTER</div><div class="m-field-value">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</div></div>
+                </div>
                 <div class="m-card-footer"><div class="m-timestamp">${getTimeAgo(inc.timestamp)}</div><div class="m-card-actions"><button class="action-btn" onclick="window.openModal('${inc.id}')" title="View Details">👁️</button></div></div>
             </div>
         `;
@@ -997,32 +896,28 @@ function renderMobileCards() {
 }
 
 window.openModal = function(id) {
-    console.log('Opening modal for incident:', id);
     const inc = allIncidents.find(i => String(i.id) === String(id));
-    if (!inc) { console.error('Incident not found:', id); showToastMessage('Incident not found', 'error'); return; }
+    if (!inc) { showToastMessage('Incident not found', 'error'); return; }
     currentIncidentId = id;
-    const modalTitle = document.getElementById('modalTitle');
-    const modalLocation = document.getElementById('modalLocation');
+    const fields = {
+        modalTitle: inc.name,
+        modalLocation: inc.location,
+        modalDate: new Date(inc.timestamp).toLocaleString(),
+        modalDescription: inc.description || 'No description provided',
+        modalReporter: inc.is_anonymous === true ? 'Anonymous Reporter' : inc.reporter,
+        modalStudentId: inc.is_anonymous === true ? 'Hidden' : inc.student_id
+    };
+    Object.entries(fields).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.innerText = val; });
     const modalCategory = document.getElementById('modalCategory');
     const modalPriority = document.getElementById('modalPriority');
-    const modalReporter = document.getElementById('modalReporter');
-    const modalStudentId = document.getElementById('modalStudentId');
-    const modalDate = document.getElementById('modalDate');
-    const modalDescription = document.getElementById('modalDescription');
     const modalStatus = document.getElementById('modalStatus');
-    if (modalTitle) modalTitle.innerText = inc.name;
-    if (modalLocation) modalLocation.innerText = inc.location;
     if (modalCategory) modalCategory.innerHTML = `<span class="badge b-${inc.category}">${inc.category}</span>`;
     if (modalPriority) modalPriority.innerHTML = `<span class="badge b-${inc.priority}">${inc.priority}</span>`;
-    if (modalReporter) modalReporter.innerText = inc.is_anonymous === true ? 'Anonymous Reporter' : inc.reporter;
-    if (modalStudentId) modalStudentId.innerText = inc.is_anonymous === true ? 'Hidden' : inc.student_id;
-    if (modalDate) modalDate.innerText = new Date(inc.timestamp).toLocaleString();
-    if (modalDescription) modalDescription.innerText = inc.description || 'No description provided';
     if (modalStatus) modalStatus.value = inc.status;
     const modalImage = document.getElementById('modalImage');
     const noImageDiv = document.getElementById('noImage');
     if (modalImage && noImageDiv) {
-        if (inc.image_url && inc.image_url !== 'null' && inc.image_url !== '' && inc.image_url !== 'undefined') {
+        if (inc.image_url && inc.image_url !== 'null' && inc.image_url !== '') {
             modalImage.src = inc.image_url;
             modalImage.style.display = 'block';
             noImageDiv.style.display = 'none';
@@ -1031,7 +926,7 @@ window.openModal = function(id) {
             noImageDiv.style.display = 'flex';
             noImageDiv.style.flexDirection = 'column';
             noImageDiv.style.alignItems = 'center';
-            noImageDiv.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p>No image attached</p><p style="font-size: 11px;">Student did not upload an image</p>`;
+            noImageDiv.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p>No image attached</p>`;
         }
     }
     const deletionInfo = document.getElementById('modalDeletionInfo');
@@ -1043,7 +938,9 @@ window.openModal = function(id) {
             deletionInfo.style.display = 'flex';
             const infoValue = deletionInfo.querySelector('.info-value');
             if (infoValue) infoValue.innerHTML = `⚠️ Will be deleted in ${hoursLeft} hours`;
-        } else { deletionInfo.style.display = 'none'; }
+        } else {
+            deletionInfo.style.display = 'none';
+        }
     }
     const modal = document.getElementById('incidentModal');
     if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; }
@@ -1059,11 +956,9 @@ window.closeModal = function() {
 window.deleteIncident = async function(id) {
     const incident = allIncidents.find(i => String(i.id) === String(id));
     if (!incident) return;
-    const confirmed = confirm(`Are you sure you want to permanently delete this incident?\n\n"${incident.name}"\n\nThis cannot be undone.`);
-    if (!confirmed) return;
+    if (!confirm(`Are you sure you want to permanently delete this incident?\n\n"${incident.name}"\n\nThis cannot be undone.`)) return;
     const { error } = await supabase.from('incident').delete().eq('id', id);
-    if (error) { console.error('Delete failed:', error); showToastMessage('❌ Failed to delete incident: ' + (error.message || 'Unknown error'), 'error'); return; }
-    console.log('✅ Incident deleted from Supabase:', id);
+    if (error) { showToastMessage('❌ Failed to delete: ' + (error.message || 'Unknown error'), 'error'); return; }
     showToastMessage('✓ Incident permanently deleted.');
     addInternalNotification('Incident Deleted', `"${incident.name}" was deleted by an admin`, false);
     allIncidents = allIncidents.filter(i => String(i.id) !== String(id));
@@ -1080,85 +975,131 @@ window.saveStatus = async function() {
     if (newStatus !== incident.status) {
         const oldStatus = incident.status;
         let resolvedAt = null;
-        if (newStatus === 'resolved' && oldStatus !== 'resolved') { resolvedAt = new Date().toISOString(); showToastMessage(`✓ Incident marked as RESOLVED. It will be automatically deleted after ${RESOLVED_RETENTION_HOURS} hours.`); }
-        else if (newStatus !== 'resolved' && oldStatus === 'resolved') { resolvedAt = null; showToastMessage(`✓ Status updated to ${newStatus}`); }
-        else { showToastMessage(`✓ Status updated to ${newStatus}`); }
+        if (newStatus === 'resolved' && oldStatus !== 'resolved') {
+            resolvedAt = new Date().toISOString();
+            showToastMessage(`✓ Marked as RESOLVED. Will be auto-deleted after ${RESOLVED_RETENTION_HOURS} hours.`);
+        } else {
+            showToastMessage(`✓ Status updated to ${newStatus}`);
+        }
         incident.status = newStatus;
         incident.resolved_at = resolvedAt;
+
         const success = await updateIncidentStatus(currentIncidentId, newStatus, resolvedAt);
-        if (success) { saveToLocalStorage(); updateAll(); }
-        else { showToastMessage('❌ Failed to update status. Please try again.', 'error'); incident.status = oldStatus; incident.resolved_at = null; updateAll(); }
+        if (success) {
+            // Notify the student their report was updated
+            await notifyStudentOfStatusChange(incident, oldStatus, newStatus);
+            saveToLocalStorage();
+            updateAll();
+        } else {
+            showToastMessage('❌ Failed to update status. Please try again.', 'error');
+            incident.status = oldStatus;
+            incident.resolved_at = null;
+            updateAll();
+        }
     }
     closeModal();
 };
 
-function getIcon(cat) { return { security:'⚠️', maintenance:'🔧', janitorial:'🧹', facilities:'🏢' }[cat] || '📋'; }
-function getCategoryColor(cat) { return { security:'#DC2626', maintenance:'#2563EB', janitorial:'#1D9E75', facilities:'#D97706' }[cat] || '#6B7280'; }
-function getTimeAgo(date) { const h = Math.floor((Date.now() - new Date(date)) / 3600000); if (h < 1) return 'Just now'; if (h < 24) return `${h}h ago`; return `${Math.floor(h/24)}d ago`; }
-function escape(t) { if (!t) return ''; return String(t).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
+function getIcon(cat) { return { security: '⚠️', maintenance: '🔧', janitorial: '🧹', facilities: '🏢' }[cat] || '📋'; }
+function getCategoryColor(cat) { return { security: '#DC2626', maintenance: '#2563EB', janitorial: '#1D9E75', facilities: '#D97706' }[cat] || '#6B7280'; }
+function getTimeAgo(date) { const h = Math.floor((Date.now() - new Date(date)) / 3600000); if (h < 1) return 'Just now'; if (h < 24) return `${h}h ago`; return `${Math.floor(h / 24)}d ago`; }
+function escape(t) { if (!t) return ''; return String(t).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
 
 function setupEvents() {
     const drawer = document.getElementById('drawer');
     const overlay = document.getElementById('overlay');
     const adminPill = document.getElementById('adminPill');
     const notificationBell = document.getElementById('notificationBell');
-    if (overlay) { overlay.onclick = () => { if (drawer) drawer.classList.remove('open'); if (overlay) overlay.classList.remove('open'); }; }
-    if (adminPill) { adminPill.onclick = () => { if (drawer) drawer.classList.toggle('open'); if (overlay) overlay.classList.toggle('open'); }; }
-    if (notificationBell) { notificationBell.onclick = (e) => { e.stopPropagation(); toggleNotificationDropdown(); }; }
-    document.querySelectorAll('.filter-chip').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentFilter = btn.dataset.filter; renderIncidents(); renderMobileCards(); }; });
-    document.querySelectorAll('.drawer-item').forEach(item => { item.onclick = () => { const page = item.dataset.page; if (page === 'incidents') window.location.href = '/Assets/Admin_dashboard/incident/incident.html'; else if (page === 'users') window.location.href = '/Assets/Admin_dashboard/user_page/user.html'; else if (page === 'analytics') window.location.href = '/Assets/Admin_dashboard/analytics/analytics.html'; else if (page === 'settings') window.location.href = '/Assets/Admin_dashboard/settings/setting.html'; else if (page !== 'dashboard') window.location.href = '/Assets/Admin_dashboard/Admin.html'; if (drawer) drawer.classList.remove('open'); if (overlay) overlay.classList.remove('open'); }; });
+    if (overlay) overlay.onclick = () => { drawer?.classList.remove('open'); overlay.classList.remove('open'); };
+    if (adminPill) adminPill.onclick = () => { drawer?.classList.toggle('open'); overlay?.classList.toggle('open'); };
+    if (notificationBell) notificationBell.onclick = (e) => { e.stopPropagation(); toggleNotificationDropdown(); };
+    document.querySelectorAll('.filter-chip').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            renderIncidents();
+            renderMobileCards();
+        };
+    });
+    document.querySelectorAll('.drawer-item').forEach(item => {
+        item.onclick = () => {
+            const page = item.dataset.page;
+            if (page === 'incidents') window.location.href = '/Assets/Admin_dashboard/incident/incident.html';
+            else if (page === 'users') window.location.href = '/Assets/Admin_dashboard/user_page/user.html';
+            else if (page === 'analytics') window.location.href = '/Assets/Admin_dashboard/analytics/analytics.html';
+            else if (page === 'settings') window.location.href = '/Assets/Admin_dashboard/settings/setting.html';
+            else if (page !== 'dashboard') window.location.href = '/Assets/Admin_dashboard/Admin.html';
+            drawer?.classList.remove('open');
+            overlay?.classList.remove('open');
+        };
+    });
     const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) { logoutBtn.onclick = () => { if (confirm('Are you sure you want to logout?')) { localStorage.removeItem('currentStudent'); localStorage.removeItem('currentAdmin'); localStorage.removeItem('isAdminLoggedIn'); window.location.href = '/land.html'; } }; }
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isNotificationDropdownOpen) { const dropdown = document.getElementById('notificationDropdown'); if (dropdown) dropdown.classList.remove('show'); isNotificationDropdownOpen = false; } });
-    document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && drawer && !drawer.contains(e.target)) { drawer.classList.remove('open'); if (overlay) overlay.classList.remove('open'); } });
+    if (logoutBtn) {
+        logoutBtn.onclick = () => {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('currentStudent');
+                localStorage.removeItem('currentAdmin');
+                localStorage.removeItem('isAdminLoggedIn');
+                window.location.href = '/land.html';
+            }
+        };
+    }
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isNotificationDropdownOpen) { document.getElementById('notificationDropdown')?.classList.remove('show'); isNotificationDropdownOpen = false; } });
+    document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && drawer && !drawer.contains(e.target)) { drawer.classList.remove('open'); overlay?.classList.remove('open'); } });
 }
 
 // Bottom Navigation
-(function() {
+(function () {
     const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
-    function getCurrentPage() { const path = window.location.pathname; if (path.includes('Admin.html') || path.includes('dashboard')) return 'dashboard'; if (path.includes('incident')) return 'incidents'; if (path.includes('user_page')) return 'users'; if (path.includes('setting')) return 'settings'; return 'dashboard'; }
-    function highlightActiveNav() { const currentPage = getCurrentPage(); bottomNavItems.forEach(item => { const page = item.dataset.page; if (page === currentPage) item.classList.add('active'); else item.classList.remove('active'); }); }
-    bottomNavItems.forEach(item => { item.addEventListener('click', () => { const page = item.dataset.page; if (page === 'dashboard') window.location.href = '/Assets/Admin_dashboard/Admin.html'; else if (page === 'incidents') window.location.href = '/Assets/Admin_dashboard/incident/incident.html'; else if (page === 'users') window.location.href = '/Assets/Admin_dashboard/user_page/user.html'; else if (page === 'analytics') window.location.href = '/Assets/Admin_dashboard/analytics/analytics.html'; else if (page === 'settings') window.location.href = '/Assets/Admin_dashboard/settings/setting.html'; }); });
-    highlightActiveNav();
+    function getCurrentPage() {
+        const path = window.location.pathname;
+        if (path.includes('Admin.html') || path.includes('dashboard')) return 'dashboard';
+        if (path.includes('incident')) return 'incidents';
+        if (path.includes('user_page')) return 'users';
+        if (path.includes('setting')) return 'settings';
+        return 'dashboard';
+    }
+    bottomNavItems.forEach(item => {
+        if (item.dataset.page === getCurrentPage()) item.classList.add('active');
+        item.addEventListener('click', () => {
+            const page = item.dataset.page;
+            if (page === 'dashboard') window.location.href = '/Assets/Admin_dashboard/Admin.html';
+            else if (page === 'incidents') window.location.href = '/Assets/Admin_dashboard/incident/incident.html';
+            else if (page === 'users') window.location.href = '/Assets/Admin_dashboard/user_page/user.html';
+            else if (page === 'analytics') window.location.href = '/Assets/Admin_dashboard/analytics/analytics.html';
+            else if (page === 'settings') window.location.href = '/Assets/Admin_dashboard/settings/setting.html';
+        });
+    });
 })();
 
-// Add CSS for animations
+// CSS Animations
 const styleElem = document.createElement('style');
 styleElem.textContent = `
-    @keyframes bellRing { 0% { transform: rotate(0deg); } 25% { transform: rotate(15deg); } 50% { transform: rotate(-15deg); } 75% { transform: rotate(5deg); } 100% { transform: rotate(0deg); } }
+    @keyframes bellRing { 0%{transform:rotate(0)} 25%{transform:rotate(15deg)} 50%{transform:rotate(-15deg)} 75%{transform:rotate(5deg)} 100%{transform:rotate(0)} }
     #notificationBell.urgent { animation: bellRing 0.5s ease infinite; color: #DC2626 !important; }
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
-    .toast-notification.urgent { background: #DC2626 !important; animation: slideIn 0.3s ease, pulse 0.5s ease 3; }
-    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    @keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes slideDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideUp { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
 `;
 document.head.appendChild(styleElem);
 
-// ============ TEST NOTIFICATION FUNCTION ==========
-window.testNotification = function() {
-    console.log('Testing notification system...');
-    const testIncident = { id: 'test-' + Date.now(), name: 'Test Incident', title: 'Test Incident', location: 'Test Location', category: 'maintenance', priority: 'high', status: 'pending', reporter: 'Test Student', student_id: 'TEST001', description: 'This is a test notification', timestamp: new Date(), is_anonymous: false };
-    checkForUrgentReport(testIncident);
-    showToastMessage('Test notification sent! Check your notifications.', 'info');
-};
-
-// ============ FORCE REFRESH FOR TABLET ==========
-window.forceRefreshNotifications = function() {
-    console.log('🔄 Force refreshing notifications for tablet...');
-    updateNotificationDropdown();
-    updateNotificationBadge();
-    showToastMessage('Notifications refreshed!', 'success');
-};
+// ============ SUPABASE REALTIME — enable notifications table ==========
+// This must be enabled in Supabase Dashboard → Database → Replication
+// for the 'notifications' table, otherwise students won't receive updates.
 
 // ============ INITIALIZATION ==========
 async function init() {
     console.log('🚀 Initializing Admin Dashboard...');
-    console.log('📱 Device type:', isMobileOrTablet() ? 'Mobile/Tablet' : 'Desktop');
-    
+    console.log('📱 Device:', isMobileOrTablet() ? 'Mobile/Tablet' : 'Desktop');
+
     currentFilter = 'all';
-    setTimeout(() => { const activeChip = document.querySelector('.filter-chip.active'); if (!activeChip) { const allChip = document.querySelector('.filter-chip[data-filter="all"]'); if (allChip) allChip.classList.add('active'); } }, 100);
-    
+    setTimeout(() => {
+        const allChip = document.querySelector('.filter-chip[data-filter="all"]');
+        if (allChip) allChip.classList.add('active');
+    }, 100);
+
     loadAdminToDrawer();
     loadNotifications();
     initDarkMode();
@@ -1166,18 +1107,58 @@ async function init() {
     setupEvents();
     startAutoCleanupScheduler();
     setupRealtimeSubscription();
-    
-    setTimeout(() => { console.log('🔄 Forcing display refresh...'); console.log('Total incidents loaded:', allIncidents.length); console.log('Current filter:', currentFilter); updateAll(); }, 500);
-    
-    // Request notification permission with delay for tablet
+
+    setTimeout(() => { updateAll(); }, 500);
+
+    // Request permission after a short delay
     setTimeout(() => { requestNotificationPermission(); }, 2000);
-    
-    setTimeout(() => { if (realtimeSubscription) console.log('📡 Realtime subscription state:', realtimeSubscription.state); }, 5000);
-    
-    window.addEventListener('storage', (e) => { if (e.key === 'campus_care_reports' && !isSavingToStorage) { console.log('Storage event from another tab - reloading incidents'); loadIncidentsFromSupabase(); } });
+
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'campus_care_reports' && !isSavingToStorage) {
+            loadIncidentsFromSupabase();
+        }
+    });
 }
 
-window.forceShowAllIncidents = function() { console.log('🔧 Force showing all incidents...'); currentFilter = 'all'; document.querySelectorAll('.filter-chip').forEach(btn => { btn.classList.remove('active'); if (btn.dataset.filter === 'all') btn.classList.add('active'); }); updateAll(); showToastMessage('Showing all incidents', 'success'); };
-window.debugIncidents = function() { console.log('=== DEBUG INCIDENTS ==='); console.log('Total incidents:', allIncidents.length); console.log('Current filter:', currentFilter); console.log('Filtered incidents:', getFiltered()); updateAll(); return { total: allIncidents.length, filter: currentFilter, filtered: getFiltered().length }; };
+window.testNotification = function () {
+    const testIncident = {
+        id: 'test-' + Date.now(),
+        name: 'Test Incident',
+        title: 'Test Incident',
+        location: 'Test Location',
+        category: 'maintenance',
+        priority: 'high',
+        status: 'pending',
+        reporter: 'Test Student',
+        student_id: 'TEST001',
+        description: 'This is a test notification',
+        timestamp: new Date(),
+        is_anonymous: false
+    };
+    checkForUrgentReport(testIncident);
+    showToastMessage('Test notification sent! Check your notifications.', 'info');
+};
+
+window.forceRefreshNotifications = function () {
+    updateNotificationDropdown();
+    updateNotificationBadge();
+    showToastMessage('Notifications refreshed!', 'success');
+};
+
+window.forceShowAllIncidents = function () {
+    currentFilter = 'all';
+    document.querySelectorAll('.filter-chip').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.filter === 'all') btn.classList.add('active');
+    });
+    updateAll();
+    showToastMessage('Showing all incidents', 'success');
+};
+
+window.debugIncidents = function () {
+    console.log('Total:', allIncidents.length, '| Filter:', currentFilter);
+    updateAll();
+    return { total: allIncidents.length, filter: currentFilter, filtered: getFiltered().length };
+};
 
 init();

@@ -1,4 +1,4 @@
-/* rep.css - Complete with Dark Mode Support */
+/* rep.css - Complete with Dark Mode Support + Compact LLM Design */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -34,6 +34,7 @@
     --warn-text: #92400E;
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
 }
 
 /* Dark Mode Variables - Applied when coming from student dashboard */
@@ -480,8 +481,8 @@ textarea {
 }
 
 .upload-circle {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -664,7 +665,307 @@ textarea {
     line-height: 1.55;
 }
 
-/* AI Indicator */
+/* ========== NEW COMPACT LLM DESIGN ========== */
+
+/* Position relative container for LLM popup */
+.description-container {
+    position: relative;
+}
+
+/* Compact Popup Modal (Desktop) */
+.llm-popup {
+    position: absolute;
+    top: 0;
+    right: -320px;
+    width: 300px;
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--border);
+    animation: slideInRight 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.llm-popup-header {
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.llm-popup-header h4 {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.llm-popup-header h4 svg {
+    width: 12px;
+    height: 12px;
+}
+
+.llm-close-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.llm-close-btn:hover {
+    background: var(--border);
+    color: var(--text);
+}
+
+.llm-popup-content {
+    padding: 12px 14px;
+}
+
+/* Severity Badges */
+.llm-severity-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.llm-severity-critical {
+    background: #FEF2F2;
+    color: #DC2626;
+}
+.dark-mode .llm-severity-critical {
+    background: #7F1D1D;
+    color: #FCA5A5;
+}
+
+.llm-severity-high {
+    background: #FEF2F2;
+    color: #DC2626;
+}
+.dark-mode .llm-severity-high {
+    background: #7F1D1D;
+    color: #FCA5A5;
+}
+
+.llm-severity-medium {
+    background: #FFFBEB;
+    color: #D97706;
+}
+.dark-mode .llm-severity-medium {
+    background: #78350F;
+    color: #FDE68A;
+}
+
+.llm-severity-low {
+    background: #E1F5EE;
+    color: #1D9E75;
+}
+.dark-mode .llm-severity-low {
+    background: #064E3B;
+    color: #34D399;
+}
+
+/* Risk Factors Section */
+.llm-risk-factors {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 8px 10px;
+    margin: 10px 0;
+    font-size: 10px;
+}
+
+.llm-risk-factors strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.llm-risk-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.llm-risk-tag {
+    background: var(--border);
+    color: var(--text);
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-size: 9px;
+    font-weight: 500;
+}
+
+/* Suggestion Box */
+.llm-suggestion {
+    font-size: 10px;
+    color: var(--teal);
+    background: var(--teal-light);
+    padding: 8px 10px;
+    border-radius: 10px;
+    margin: 10px 0;
+    line-height: 1.4;
+}
+
+.llm-suggestion svg {
+    width: 11px;
+    height: 11px;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+/* Action Buttons */
+.llm-popup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.llm-accept-btn {
+    flex: 1;
+    background: var(--teal);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 24px;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.llm-accept-btn:hover {
+    background: var(--teal-dark);
+    transform: translateY(-1px);
+}
+
+.llm-dismiss-btn {
+    flex: 1;
+    background: var(--border);
+    color: var(--muted);
+    border: none;
+    padding: 6px 10px;
+    border-radius: 24px;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.llm-dismiss-btn:hover {
+    background: var(--border-hover);
+    color: var(--text);
+}
+
+/* Compact Inline Version (Mobile) */
+.llm-compact {
+    margin-top: 12px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 12px;
+    border-left: 3px solid var(--teal);
+    animation: fadeInUp 0.25s ease;
+}
+
+.llm-compact-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.llm-compact-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.llm-compact-text {
+    font-size: 10px;
+    color: var(--muted);
+    flex: 1;
+}
+
+.llm-compact-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.llm-compact-btn {
+    padding: 3px 8px;
+    border-radius: 16px;
+    font-size: 9px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+/* Loading State */
+.llm-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 12px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+    animation: fadeInUp 0.2s ease;
+}
+
+.llm-loading-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--teal);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+/* New Animations */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========== END OF NEW LLM DESIGN ========== */
+
+/* AI Indicator (Existing - preserved) */
 .ai-indicator {
     margin-top: 14px;
     padding: 12px 16px;
@@ -996,6 +1297,15 @@ input.error, textarea.error, select.error {
         padding: 10px 14px;
         font-size: 12px;
     }
+
+    /* LLM popup becomes inline on mobile */
+    .llm-popup {
+        position: static;
+        transform: none;
+        width: 100%;
+        margin-top: 12px;
+        box-shadow: var(--shadow-sm);
+    }
 }
 
 /* Tablet Responsive */
@@ -1089,4 +1399,51 @@ input.error, textarea.error, select.error {
 /* Tips card check mark in dark mode */
 .dark-mode .tip-check svg {
     stroke: var(--teal);
+}
+
+/* Add to your existing styles */
+#cameraBtn:hover {
+    background: #2563EB;
+    transform: scale(1.02);
+}
+
+#capturePhotoBtn:hover {
+    background: #085041;
+}
+
+#closeCameraBtn:hover, #cancelCameraBtn:hover {
+    opacity: 0.8;
+}
+
+/* Mobile optimization */
+@media (max-width: 768px) {
+    #cameraBtn {
+        padding: 8px 14px;
+        font-size: 13px;
+    }
+    
+    #cameraContainer {
+        gap: 8px;
+    }
+}
+/* Add to your style section */
+#uploadChoiceDialog {
+    backdrop-filter: blur(4px);
+}
+
+#uploadChoiceDialog button:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}
+
+#chooseGalleryBtn:hover {
+    background: #085041 !important;
+}
+
+#chooseCameraBtn:hover {
+    background: #2563EB !important;
+}
+
+#cancelChoiceBtn:hover {
+    background: var(--hover-bg);
 }
