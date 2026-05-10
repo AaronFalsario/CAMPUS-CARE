@@ -65,7 +65,7 @@ async function checkForDuplicateReport(title, location, category, description) {
         if (similarReports && similarReports.length > 0) {
             return { hasDuplicates: true, duplicates: similarReports };
         }
-        
+
         return { hasDuplicates: false, duplicates: [] };
     } catch (error) {
         console.error('Duplicate check failed:', error);
@@ -112,14 +112,14 @@ function showDuplicateWarning(duplicates) {
         </div>
     `;
     document.body.appendChild(warningModal);
-    
+
     const cancelBtn = document.getElementById('cancelSubmitBtn');
     const forceBtn = document.getElementById('forceSubmitBtn');
-    
+
     cancelBtn?.addEventListener('click', () => {
         warningModal.remove();
     });
-    
+
     forceBtn?.addEventListener('click', () => {
         warningModal.remove();
         performSubmit(true);
@@ -128,15 +128,15 @@ function showDuplicateWarning(duplicates) {
 
 // ========== LLM TEXT ANALYSIS ==========
 async function analyzeTextWithLLM(text, title, category) {
-    console.log(' Analyzing text with LLM...', { title, category, textLength: text.length });
-    
+    console.log('Analyzing text with LLM...', { title, category, textLength: text.length });
+
     if ('ai' in window && window.ai?.canCreateTextSession) {
         try {
             const capabilities = await window.ai.canCreateTextSession();
             if (capabilities === 'readily') {
                 const session = await window.ai.createTextSession();
                 const prompt = `Analyze this campus incident report for an emergency system. Return ONLY valid JSON without markdown formatting.
-                
+
 Title: "${title}"
 Category: "${category}"
 Description: "${text.substring(0, 1000)}"
@@ -150,23 +150,23 @@ Return JSON with these exact fields:
     "sentiment": "urgent|neutral|routine",
     "confidence": 0.0 to 1.0
 }`;
-                
+
                 const result = await session.prompt(prompt);
                 session.destroy();
                 const cleaned = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
                 const analysis = JSON.parse(cleaned);
-                console.log('✅ LLM Analysis (Gemini):', analysis);
+                console.log('LLM Analysis (Gemini):', analysis);
                 return analysis;
             }
         } catch (error) {
             console.warn('Chrome AI failed:', error);
         }
     }
-    
+
     return fallbackTextAnalysis(text);
 }
 
-//LLM ENGINE
+// LLM ENGINE
 function fallbackTextAnalysis(text) {
     const lowerText = text.toLowerCase();
     const threatLevels = {
@@ -187,13 +187,13 @@ function fallbackTextAnalysis(text) {
             weight: 15
         }
     };
-    
+
     const amplifiers = {
         urgent: ['immediately', 'asap', 'right now', 'urgent', 'emergency', 'critical'],
         widespread: ['everyone', 'whole building', 'entire floor', 'many people', 'multiple'],
         time_sensitive: ['spreading', 'getting worse', 'growing', 'expanding']
     };
-    
+
     let scores = { critical: 0, high: 0, medium: 0, low: 0 };
     let detectedKeywords = [];
     let matchedAmplifiers = [];
@@ -209,7 +209,7 @@ function fallbackTextAnalysis(text) {
             }
         }
     }
-    
+
     for (const [type, words] of Object.entries(amplifiers)) {
         for (const word of words) {
             if (lowerText.includes(word)) {
@@ -220,29 +220,29 @@ function fallbackTextAnalysis(text) {
             }
         }
     }
-    
+
     const wordCount = text.split(/\s+/).length;
     if (wordCount > 50) {
         scores.critical += 5;
         scores.high += 5;
     }
-    
+
     const exclamationCount = (text.match(/!/g) || []).length;
     if (exclamationCount > 0) {
         scores.critical += exclamationCount * 10;
         scores.high += exclamationCount * 5;
     }
-    
+
     let severity = 'low';
     let maxScore = scores.low;
     if (scores.critical > maxScore) { severity = 'critical'; maxScore = scores.critical; }
     if (scores.high > maxScore) { severity = 'high'; maxScore = scores.high; }
     if (scores.medium > maxScore) { severity = 'medium'; maxScore = scores.medium; }
-    
+
     const uniqueRiskFactors = [...new Set(detectedKeywords.slice(0, 5))];
     let suggestedResponse = '';
     let needsImmediateAction = false;
-    
+
     if (severity === 'critical') {
         needsImmediateAction = true;
         if (scores.critical > 200) {
@@ -269,16 +269,16 @@ function fallbackTextAnalysis(text) {
     } else {
         suggestedResponse = '✅ Routine Request: Added to maintenance queue. Expected resolution within 2-3 business days.';
     }
-    
+
     let sentiment = severity === 'critical' || severity === 'high' ? 'urgent' : severity === 'medium' ? 'neutral' : 'routine';
     let confidence = maxScore > 100 ? 0.95 : maxScore > 70 ? 0.85 : maxScore > 40 ? 0.75 : maxScore > 20 ? 0.65 : 0.6;
-    
+
     const context = {
         hasLocation: /\b(building|room|hall|floor|wing|office|classroom|laboratory)\b/i.test(text),
         hasTimeFrame: /\b(now|immediately|asap|urgent|today|tonight)\b/i.test(text),
         hasPeople: /\b(students|staff|faculty|people|everyone|crowd)\b/i.test(text)
     };
-    
+
     if (context.hasLocation && severity !== 'critical') {
         suggestedResponse += ' Location information included - will expedite response.';
     }
@@ -286,7 +286,7 @@ function fallbackTextAnalysis(text) {
         suggestedResponse += ' Multiple people may be affected. Consider broader notification.';
         needsImmediateAction = true;
     }
-    
+
     return {
         severity: severity,
         risk_factors: uniqueRiskFactors,
@@ -303,21 +303,21 @@ function showLLMSuggestion(analysis) {
     if (existingPopup) existingPopup.remove();
     const existingCompact = document.querySelector('.llm-compact');
     if (existingCompact) existingCompact.remove();
-    
+
     const descriptionCard = document.querySelector('.card:has(#description)');
     if (!descriptionCard) return;
     descriptionCard.style.position = 'relative';
-    
+
     const severityMap = {
         critical: { class: 'llm-severity-critical', icon: '🔴', text: 'CRITICAL' },
         high: { class: 'llm-severity-high', icon: '🟠', text: 'HIGH RISK' },
         medium: { class: 'llm-severity-medium', icon: '🟡', text: 'MEDIUM RISK' },
         low: { class: 'llm-severity-low', icon: '🟢', text: 'LOW RISK' }
     };
-    
+
     const severityInfo = severityMap[analysis.severity] || severityMap.low;
     const isMobile = window.innerWidth <= 768;
-    
+
     if (isMobile) {
         const compactDiv = document.createElement('div');
         compactDiv.className = 'llm-compact';
@@ -399,13 +399,19 @@ async function sendUrgentNotifications(report, currentUser, isAnonymous) {
     const notifications = usersToNotify.map(user => ({
         alert_id: report.id.toString(), user_id: user.id, user_role: user.role, channel: 'IN_APP', status: 'SENT',
         sent_at: new Date().toISOString(), title: `🚨 URGENT: ${report.title}`,
-        message: `${isAnonymous ? 'Anonymous' : report.studentName} reported: ${report.description.substring(0, 100)}`,
+        message: `${isAnonymous ? 'Anonymous' : report.student_name} reported: ${report.description.substring(0, 100)}`,
         location: report.location, category: report.category, priority: report.priority, is_read: false, created_at: new Date().toISOString()
     }));
     const { data: inserted, error: insertError } = await supabase.from('notifications').insert(notifications).select();
     if (insertError) console.error('Failed to insert notifications:', insertError);
     else console.log(`✅ Sent ${inserted?.length || notifications.length} urgent notifications`);
-    storeUrgentAlert({ id: report.id, title: report.title, location: report.location, category: report.category, priority: report.priority, description: report.description, reporterName: isAnonymous ? 'Anonymous Reporter' : report.studentName, timestamp: new Date().toISOString() });
+    storeUrgentAlert({
+        id: report.id, title: report.title, location: report.location,
+        category: report.category, priority: report.priority,
+        description: report.description,
+        reporterName: isAnonymous ? 'Anonymous Reporter' : report.student_name,
+        timestamp: new Date().toISOString()
+    });
 }
 
 function storeUrgentAlert(alertData) {
@@ -419,7 +425,7 @@ function storeUrgentAlert(alertData) {
 async function loadMobileNetLazy() {
     if (mobilenetModel) return mobilenetModel;
     if (aiLoadPromise) return aiLoadPromise;
-    
+
     aiLoadPromise = new Promise(async (resolve, reject) => {
         try {
             const indicator = document.getElementById('aiAnalysisIndicator');
@@ -428,7 +434,7 @@ async function loadMobileNetLazy() {
                 indicator.style.display = 'block';
                 indicator.innerHTML = `<div style="display: flex; align-items: center; gap: 12px;"><div class="spinner-small"></div><span> Loading AI model (first time takes 3-5 seconds)...</span></div>`;
             }
-            
+
             if (typeof tf === 'undefined') {
                 await new Promise((resolveScript) => {
                     const script = document.createElement('script');
@@ -438,9 +444,9 @@ async function loadMobileNetLazy() {
                     document.head.appendChild(script);
                 });
             }
-            
+
             await new Promise(r => setTimeout(r, 100));
-            
+
             if (typeof mobilenet === 'undefined') {
                 await new Promise((resolveScript) => {
                     const script = document.createElement('script');
@@ -450,7 +456,7 @@ async function loadMobileNetLazy() {
                     document.head.appendChild(script);
                 });
             }
-            
+
             await new Promise(r => setTimeout(r, 200));
             mobilenetModel = await mobilenet.load();
             console.log('✅ MobileNet model loaded successfully!');
@@ -507,7 +513,7 @@ async function analyzeImageWithAI(imageFile) {
                 let highestConfidence = 0.3;
                 let matchedKeywords = [];
                 let allPredictions = [];
-                
+
                 if (mobilenetModel) {
                     try {
                         const predictions = await analyzeImageWithMobileNet(img);
@@ -548,7 +554,7 @@ async function analyzeImageWithAI(imageFile) {
                         }
                     } catch (err) { console.error('MobileNet analysis error:', err); }
                 }
-                
+
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 canvas.width = img.width;
@@ -679,18 +685,29 @@ function showAISuggestion(category, confidence, matchedKeywords = [], priority =
     const confidencePercent = Math.round(confidence * 100);
     let priorityBadge = '';
     if (priority) {
-        const priorityColors = { high: { bg: '#FEF2F2', color: '#DC2626', text: '🔴 High Priority' }, medium: { bg: '#FFFBEB', color: '#D97706', text: '🟠 Medium Priority' }, low: { bg: '#E1F5EE', color: '#1D9E75', text: '🟢 Low Priority' } };
+        const priorityColors = {
+            high: { bg: '#FEF2F2', color: '#DC2626', text: '🔴 High Priority' },
+            medium: { bg: '#FFFBEB', color: '#D97706', text: '🟠 Medium Priority' },
+            low: { bg: '#E1F5EE', color: '#1D9E75', text: '🟢 Low Priority' }
+        };
         const pc = priorityColors[priority];
         if (pc) priorityBadge = `<span style="background: ${pc.bg}; color: ${pc.color}; padding: 4px 12px; border-radius: 20px; font-size: 12px;">${pc.text}</span>`;
     }
-    let keywordText = matchedKeywords && matchedKeywords.length > 0 ? `<div style="font-size: 11px; color: #6B7280; margin-top: 6px;">🔍 Detected: ${matchedKeywords.join(', ')}</div>` : '';
+    let keywordText = matchedKeywords && matchedKeywords.length > 0
+        ? `<div style="font-size: 11px; color: #6B7280; margin-top: 6px;">🔍 Detected: ${matchedKeywords.join(', ')}</div>`
+        : '';
     indicator.className = 'ai-indicator success';
     indicator.style.display = 'block';
     indicator.innerHTML = `<div class="ai-suggestion-content"><div style="flex:1;"><div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;"><span style="font-size:20px;">🤖</span><span style="font-weight:500;">AI detected:</span><span class="ai-category-badge" style="background:${categoryInfo.bgColor}; color:${categoryInfo.color};">${categoryInfo.name}</span><span style="color:#6B7280;">(${confidencePercent}% confidence)</span>${priorityBadge}</div>${keywordText}</div><div class="ai-buttons"><button type="button" class="ai-accept-btn" id="acceptAISuggestion">✓ Accept</button><button type="button" class="ai-dismiss-btn" id="dismissAISuggestion">✗ Dismiss</button></div></div>`;
     currentAnalysis = { category, confidence, priority, matchedKeywords };
     const acceptBtn = document.getElementById('acceptAISuggestion');
     const dismissBtn = document.getElementById('dismissAISuggestion');
-    if (acceptBtn) acceptBtn.onclick = () => { applyAICategory(category); if (priority) applyAIPriority(priority); indicator.style.display = 'none'; showNotification(`✅ Set to ${categoryInfo.name}${priority ? ` with ${priority} priority` : ''}`, 'success'); };
+    if (acceptBtn) acceptBtn.onclick = () => {
+        applyAICategory(category);
+        if (priority) applyAIPriority(priority);
+        indicator.style.display = 'none';
+        showNotification(`✅ Set to ${categoryInfo.name}${priority ? ` with ${priority} priority` : ''}`, 'success');
+    };
     if (dismissBtn) dismissBtn.onclick = () => { indicator.style.display = 'none'; };
 }
 
@@ -700,7 +717,12 @@ function getCurrentStudent() {
     if (stored) {
         try {
             const student = JSON.parse(stored);
-            return { id: student.userId || student.id || 'student_001', name: student.name || 'Student', studentId: student.studentId || student.id || '2024-00001', email: student.email || 'student@campus.edu' };
+            return {
+                id: student.userId || student.id || 'student_001',
+                name: student.name || 'Student',
+                studentId: student.studentId || student.id || '2024-00001',
+                email: student.email || 'student@campus.edu'
+            };
         } catch(e) { console.error('Error parsing student data:', e); }
     }
     return { id: 'student_001', name: 'Student', studentId: '2024-00001', email: 'student@campus.edu' };
@@ -722,7 +744,8 @@ function setupAnonymousToggle() {
     if (!anonymousToggle) return;
     anonymousToggle.addEventListener('change', function(e) {
         if (this.checked) {
-            if (!studentNameInput.getAttribute('data-original-name') && studentNameInput.value) studentNameInput.setAttribute('data-original-name', studentNameInput.value);
+            if (!studentNameInput.getAttribute('data-original-name') && studentNameInput.value)
+                studentNameInput.setAttribute('data-original-name', studentNameInput.value);
             studentNameInput.value = '';
             studentNameInput.disabled = true;
             studentNameInput.style.backgroundColor = '#F3F4F6';
@@ -782,35 +805,6 @@ async function generateImageDescription(imageFile) {
     });
 }
 
-async function analyzeImageColors(img) {
-    return new Promise((resolve) => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        let redPixels = 0, darkPixels = 0, brightPixels = 0;
-        let totalPixels = canvas.width * canvas.height;
-        for (let i = 0; i < data.length; i += 4) {
-            const r = data[i], g = data[i+1], b = data[i+2];
-            const brightness = (r + g + b) / 3;
-            if (r > 200 && g < 100 && b < 100) redPixels++;
-            if (brightness < 50) darkPixels++;
-            if (brightness > 200) brightPixels++;
-        }
-        const redRatio = redPixels / totalPixels;
-        const darkRatio = darkPixels / totalPixels;
-        const brightRatio = brightPixels / totalPixels;
-        let colorDesc = '';
-        if (redRatio > 0.05) colorDesc = ' Red color detected - may indicate emergency or blood.';
-        if (darkRatio > 0.6) colorDesc += ' Very dark image - lighting issue suspected.';
-        if (brightRatio > 0.6) colorDesc += ' Very bright image - possible overexposure or daylight.';
-        resolve(colorDesc);
-    });
-}
-
 // ========== IMAGE UPLOAD SETUP ==========
 function setupImageUpload() {
     const imageInput = document.getElementById('image');
@@ -819,37 +813,37 @@ function setupImageUpload() {
     const previewContainer = document.getElementById('imagePreviewContainer');
     const previewImg = document.getElementById('previewImg');
     const removeBtn = document.getElementById('removeImageBtn');
-    
+
     if (!uploadZone) return;
-    
+
     const choiceDialog = document.createElement('div');
     choiceDialog.id = 'uploadChoiceDialog';
     choiceDialog.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:20000; display:none; align-items:center; justify-content:center; animation:fadeIn 0.2s ease;`;
     choiceDialog.innerHTML = `<div style="background:var(--surface); border-radius:24px; max-width:340px; width:90%; overflow:hidden; box-shadow:0 20px 40px rgba(0,0,0,0.3);"><div style="padding:24px;"><div style="text-align:center; margin-bottom:24px;"><span style="font-size:48px;">📸</span><h3 style="font-size:20px; font-weight:600; margin-top:12px; color:var(--text);">Choose Image Source</h3></div><div style="display:flex; flex-direction:column; gap:12px;"><button id="chooseGalleryBtn" style="padding:14px; background:#1D9E75; color:white; border:none; border-radius:40px; cursor:pointer; font-weight:500; font-size:16px; display:flex; align-items:center; justify-content:center; gap:12px;"><span>🖼️</span> Upload from Gallery</button><button id="chooseCameraBtn" style="padding:14px; background:#3B82F6; color:white; border:none; border-radius:40px; cursor:pointer; font-weight:500; font-size:16px; display:flex; align-items:center; justify-content:center; gap:12px;"><span>📷</span> Take a Photo</button><button id="cancelChoiceBtn" style="padding:12px; background:transparent; color:var(--text); border:1px solid var(--border); border-radius:40px; cursor:pointer; font-weight:500; font-size:14px;">Cancel</button></div></div></div>`;
     document.body.appendChild(choiceDialog);
-    
+
     const cameraModal = document.createElement('div');
     cameraModal.id = 'cameraModal';
     cameraModal.style.cssText = `position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.95); z-index:20001; display:none; flex-direction:column; align-items:center; justify-content:center; animation:fadeIn 0.3s ease;`;
     cameraModal.innerHTML = `<div style="background:var(--surface); border-radius:24px; max-width:95%; width:500px; overflow:hidden;"><div style="padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;"><h3 style="font-size:18px; font-weight:600; color:var(--text);">Take a Photo</h3><button id="closeCameraModalBtn" style="background:none; border:none; font-size:28px; cursor:pointer; color:var(--text);">&times;</button></div><div style="padding:20px;"><div style="position:relative; background:#000; border-radius:12px; overflow:hidden;"><video id="cameraVideo" autoplay playsinline style="width:100%; border-radius:12px; display:block;"></video><canvas id="cameraCanvas" style="display:none;"></canvas></div><div style="display:flex; gap:12px; margin-top:20px;"><button id="capturePhotoBtn" style="flex:1; padding:14px; background:#1D9E75; color:white; border:none; border-radius:40px; cursor:pointer; font-weight:500; font-size:16px;">📸 Capture</button><button id="cancelCameraModalBtn" style="flex:1; padding:14px; background:#6B7280; color:white; border:none; border-radius:40px; cursor:pointer; font-weight:500; font-size:16px;">Cancel</button></div></div></div>`;
     document.body.appendChild(cameraModal);
-    
+
     let currentStream = null;
     const video = document.getElementById('cameraVideo');
     const canvas = document.getElementById('cameraCanvas');
-    
+
     uploadZone.addEventListener('click', (e) => { if (e.target === removeBtn || removeBtn?.contains(e.target)) return; choiceDialog.style.display = 'flex'; });
     uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.style.borderColor = '#1D9E75'; uploadZone.style.background = '#F0FDF4'; });
     uploadZone.addEventListener('dragleave', (e) => { e.preventDefault(); uploadZone.style.borderColor = '#D1D5DB'; uploadZone.style.background = '#F9FAFB'; });
     uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.style.borderColor = '#D1D5DB'; uploadZone.style.background = '#F9FAFB'; const file = e.dataTransfer.files[0]; if (file && file.type.startsWith('image/')) { choiceDialog.style.display = 'none'; handleImageFile(file); } });
-    
+
     const galleryBtn = document.getElementById('chooseGalleryBtn');
     if (galleryBtn) galleryBtn.addEventListener('click', () => { choiceDialog.style.display = 'none'; imageInput.click(); });
     const cameraBtn = document.getElementById('chooseCameraBtn');
     if (cameraBtn) cameraBtn.addEventListener('click', async () => { choiceDialog.style.display = 'none'; await requestCameraAccess(); });
     const cancelChoiceBtn = document.getElementById('cancelChoiceBtn');
     if (cancelChoiceBtn) cancelChoiceBtn.addEventListener('click', () => { choiceDialog.style.display = 'none'; });
-    
+
     async function requestCameraAccess() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -866,7 +860,7 @@ function setupImageUpload() {
             closeCameraModal();
         }
     }
-    
+
     const captureBtn = document.getElementById('capturePhotoBtn');
     if (captureBtn) captureBtn.addEventListener('click', () => {
         if (video.videoWidth > 0) {
@@ -881,18 +875,18 @@ function setupImageUpload() {
             }, 'image/jpeg', 0.9);
         }
     });
-    
+
     function closeCameraModal() {
         if (currentStream) { currentStream.getTracks().forEach(track => track.stop()); currentStream = null; }
         cameraModal.style.display = 'none';
         video.srcObject = null;
     }
-    
+
     const closeCameraModalBtn = document.getElementById('closeCameraModalBtn');
     const cancelCameraModalBtn = document.getElementById('cancelCameraModalBtn');
     if (closeCameraModalBtn) closeCameraModalBtn.addEventListener('click', closeCameraModal);
     if (cancelCameraModalBtn) cancelCameraModalBtn.addEventListener('click', closeCameraModal);
-    
+
     if (removeBtn) removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         imageInput.value = '';
@@ -904,12 +898,12 @@ function setupImageUpload() {
         if (indicator) indicator.style.display = 'none';
         currentAnalysis = null;
     });
-    
+
     imageInput.addEventListener('change', function(e) { const file = e.target.files[0]; if (file) handleImageFile(file); imageInput.value = ''; });
-    
+
     async function handleImageFile(file) {
         currentImageFile = file;
-        
+
         const reader = new FileReader();
         reader.onload = function(event) {
             uploadedImageData = event.target.result;
@@ -918,14 +912,14 @@ function setupImageUpload() {
             previewContainer.style.display = 'flex';
         };
         reader.readAsDataURL(file);
-        
+
         const indicator = document.getElementById('aiAnalysisIndicator');
         if (indicator) {
             indicator.className = 'ai-indicator processing';
             indicator.style.display = 'block';
             indicator.innerHTML = `<div style="display: flex; align-items: center; gap: 12px;"><div class="spinner-small"></div><span>🔍 AI is analyzing the image with Gemini Vision...</span></div>`;
         }
-        
+
         try {
             await loadMobileNetLazy();
             await new Promise(r => setTimeout(r, 500));
@@ -934,17 +928,17 @@ function setupImageUpload() {
                 analyzeImageWithAI(file),
                 generateImageDescription(file)
             ]);
-            
+
             console.log('MobileNet AI Result:', aiResult);
             console.log('Gemini Vision Analysis:', imageDescription);
-            
+
             const descriptionField = document.getElementById('description');
             const titleField = document.getElementById('title');
-            
+
             if (descriptionField && imageDescription && imageDescription.description && !imageDescription.description.includes("unable to analyze")) {
                 const currentDesc = descriptionField.value;
                 const geminiDescription = imageDescription.description;
-                
+
                 if (!currentDesc || currentDesc.trim().length === 0 || currentDesc === "The problem here is: " || currentDesc.includes('[AI Analysis]')) {
                     descriptionField.value = geminiDescription;
                     descriptionField.style.borderColor = 'var(--teal)';
@@ -953,22 +947,22 @@ function setupImageUpload() {
                     const length = descriptionField.value.length;
                     descriptionField.setSelectionRange(length, length);
                     showNotification('📸 Gemini AI analyzed the image! Description added. You can edit if needed.', 'success');
-                    
+
                     if (titleField && (!titleField.value || titleField.value.trim().length === 0)) {
                         titleField.placeholder = "e.g., Broken Window, Water Leak, Trash Overflow";
                         titleField.style.backgroundColor = 'var(--teal-light)';
                         setTimeout(() => { titleField.style.backgroundColor = ''; }, 2000);
                     }
-                    
+
                     setTimeout(() => { descriptionField.style.backgroundColor = ''; }, 3000);
                     descriptionField.dispatchEvent(new Event('input'));
                 }
             }
-            
+
             if (aiResult && aiResult.predicted_type && aiResult.confidence > 0.35) {
                 const priorityResult = await analyzePriorityLevel(file, aiResult.predicted_type);
                 showAISuggestion(aiResult.predicted_type, aiResult.confidence, aiResult.matchedKeywords, priorityResult.priority);
-                
+
                 if (aiResult.confidence > 0.7) {
                     setTimeout(() => {
                         applyAICategory(aiResult.predicted_type);
@@ -995,65 +989,144 @@ function setupImageUpload() {
     }
 }
 
-// ========== FORM SUBMISSION ==========
+// ========== FORM SUBMISSION — CONNECTED TO SUPABASE incident TABLE ==========
 let pendingSubmitData = null;
 let forceSubmitFlag = false;
 
 async function performSubmit(forceSubmit = false) {
     const data = pendingSubmitData;
     if (!data) return;
+
     setLoading(true);
+
     try {
         const currentStudent = getCurrentStudent();
         const isAnonymous = data.isAnonymous;
-        const finalStudentName = (isAnonymous && !data.studentName) ? 'Anonymous Reporter' : (data.studentName || currentStudent.name);
-        let imageUrl = data.imageData || null;
-        const localReport = { id: Date.now(), title: data.title, location: data.location, category: data.category, priority: data.priority, description: data.description, imageUrl: imageUrl, studentName: finalStudentName, studentId: currentStudent.studentId, reporterId: currentStudent.id, status: 'pending', timestamp: new Date().toISOString(), llm_analysis: data.llm_analysis };
+        const finalStudentName = (isAnonymous && !data.studentName)
+            ? 'Anonymous Reporter'
+            : (data.studentName || currentStudent.name);
+
+        // Build ai_confidence string from LLM result
+        const aiConfidenceValue = data.llm_analysis
+            ? String(Math.round((data.llm_analysis.confidence || 0) * 100)) + '%'
+            : null;
+
+        // Map every field to the exact incident table column names
+        const supabaseReport = {
+            title:              data.title,
+            location:           data.location,
+            category:           data.category,
+            priority:           data.priority,
+            description:        data.description,
+            image_url:          data.imageData || null,   // base64 or null
+            student_name:       finalStudentName,
+            student_id_number:  currentStudent.studentId,
+            status:             'pending',
+            is_anonymous:       isAnonymous ? 'true' : 'false',
+            ai_confidence:      aiConfidenceValue,
+            // resolved_at is left out — Supabase defaults it to NULL
+            // created_at and updated_at have now() defaults but we set them explicitly for clarity
+            created_at:         new Date().toISOString(),
+            updated_at:         new Date().toISOString()
+        };
+
+        console.log('📤 Submitting to Supabase incident table:', supabaseReport);
+
+        const { data: insertedData, error: supabaseError } = await supabase
+            .from('incident')
+            .insert([supabaseReport])
+            .select();
+
+        if (supabaseError) {
+            console.error('❌ Supabase error:', supabaseError);
+            showNotification('Failed to save report: ' + supabaseError.message, 'error');
+            setLoading(false);
+            return;
+        }
+
+        console.log('✅ Saved to Supabase incident table:', insertedData);
+
+        // Keep a local backup with the inserted id
+        const localReport = {
+            id: insertedData?.[0]?.id || Date.now(),
+            ...supabaseReport
+        };
         const existingReports = JSON.parse(localStorage.getItem('campus_care_reports') || '[]');
         existingReports.unshift(localReport);
         localStorage.setItem('campus_care_reports', JSON.stringify(existingReports));
-        const isUrgent = isUrgentReport(data.category, data.priority, data.title, data.description) || (data.llm_analysis?.severity === 'critical');
-        if (isUrgent) { await sendUrgentNotifications(localReport, currentStudent, isAnonymous); showNotification('🚨 URGENT REPORT SUBMITTED! Notifications sent.', 'warning'); }
-        else { showNotification('✅ Report submitted successfully!', 'success'); }
-        try {
-            const supabaseData = { title: data.title, location: data.location, category: data.category, priority: data.priority, description: data.description, image_url: imageUrl, student_name: finalStudentName, student_id_number: currentStudent.studentId, status: 'pending', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), llm_analysis: data.llm_analysis, text_severity: data.llm_analysis?.severity };
-            const { error } = await supabase.from('incident').insert([supabaseData]);
-            if (error) console.error('Supabase error:', error);
-        } catch (supabaseError) { console.log('Supabase save skipped:', supabaseError.message); }
-        setTimeout(() => { window.location.href = '/Assets/Student_dashboard/SDB.html'; }, 2000);
-    } catch (error) { console.error('Submission error:', error); showNotification('❌ Failed: ' + error.message, 'error'); setLoading(false); }
+
+        // Urgent notification logic
+        const isUrgent = isUrgentReport(data.category, data.priority, data.title, data.description);
+        if (isUrgent) {
+            await sendUrgentNotifications(localReport, currentStudent, isAnonymous);
+            showNotification('🚨 URGENT REPORT SUBMITTED! Notifications sent.', 'warning');
+        } else {
+            showNotification('✅ Report submitted successfully!', 'success');
+        }
+
+        setTimeout(() => {
+            window.location.href = '/Assets/Student_dashboard/SDB.html';
+        }, 2000);
+
+    } catch (error) {
+        console.error('Submission error:', error);
+        showNotification('❌ Failed: ' + error.message, 'error');
+        setLoading(false);
+    }
 }
 
 async function handleFormSubmit(e) {
     e.preventDefault();
-    const title = document.getElementById('title')?.value.trim();
-    const location = document.getElementById('location')?.value.trim();
-    const category = document.getElementById('category')?.value;
-    const priority = document.getElementById('priority')?.value;
+
+    const title       = document.getElementById('title')?.value.trim();
+    const location    = document.getElementById('location')?.value.trim();
+    const category    = document.getElementById('category')?.value;
+    const priority    = document.getElementById('priority')?.value;
     const description = document.getElementById('description')?.value.trim();
     const studentName = document.getElementById('studentName')?.value.trim();
     const anonymousToggle = document.getElementById('anonymousToggle');
     const isAnonymous = anonymousToggle ? anonymousToggle.checked : false;
-    if (!title) { showErrorMessage('Please enter a title', 'titleError'); scrollToError(document.getElementById('title')); return; }
-    if (!location) { showErrorMessage('Please enter a location', 'locationError'); scrollToError(document.getElementById('location')); return; }
-    if (!category) { showErrorMessage('Please select a category', 'categoryError'); scrollToError(document.querySelector('.cat-grid')); return; }
-    if (!priority) { showErrorMessage('Please select a priority level', 'priorityError'); scrollToError(document.querySelector('.priority-row')); return; }
-    if (!description) { showErrorMessage('Please provide a description', 'descriptionError'); scrollToError(document.getElementById('description')); return; }
+
+    if (!title)       { showErrorMessage('Please enter a title', 'titleError');             scrollToError(document.getElementById('title'));              return; }
+    if (!location)    { showErrorMessage('Please enter a location', 'locationError');       scrollToError(document.getElementById('location'));           return; }
+    if (!category)    { showErrorMessage('Please select a category', 'categoryError');      scrollToError(document.querySelector('.cat-grid'));           return; }
+    if (!priority)    { showErrorMessage('Please select a priority level', 'priorityError');scrollToError(document.querySelector('.priority-row'));       return; }
+    if (!description) { showErrorMessage('Please provide a description', 'descriptionError');scrollToError(document.getElementById('description'));      return; }
+
     setLoading(true);
+
     try {
         const llmAnalysis = await analyzeTextWithLLM(description, title, category);
         console.log('LLM Analysis Result:', llmAnalysis);
         if (llmAnalysis && document.getElementById('llmTextIndicator')) showLLMSuggestion(llmAnalysis);
+
         const duplicateCheck = await checkForDuplicateReport(title, location, category, description);
+
         if (duplicateCheck.hasDuplicates && !forceSubmitFlag) {
             setLoading(false);
-            pendingSubmitData = { title, location, category, priority, description, studentName, isAnonymous, imageData: uploadedImageData, llm_analysis: llmAnalysis };
+            pendingSubmitData = {
+                title, location, category, priority, description,
+                studentName, isAnonymous,
+                imageData: uploadedImageData,
+                llm_analysis: llmAnalysis
+            };
             showDuplicateWarning(duplicateCheck.duplicates);
             return;
         }
-        pendingSubmitData = { title, location, category, priority, description, studentName, isAnonymous, imageData: uploadedImageData, llm_analysis: llmAnalysis };
+
+        pendingSubmitData = {
+            title, location, category, priority, description,
+            studentName, isAnonymous,
+            imageData: uploadedImageData,
+            llm_analysis: llmAnalysis
+        };
         await performSubmit(true);
-    } catch (error) { console.error('Duplicate check error:', error); setLoading(false); showNotification('Error checking for duplicates. Please try again.', 'error'); }
+
+    } catch (error) {
+        console.error('Form submission error:', error);
+        setLoading(false);
+        showNotification('Error submitting report. Please try again.', 'error');
+    }
 }
 
 // ========== UI HELPERS ==========
@@ -1065,7 +1138,8 @@ window.selCat = function(element) {
     const description = document.getElementById('description')?.value;
     const title = document.getElementById('title')?.value;
     if (description && description.length > 20) {
-        analyzeTextWithLLM(description, title, element.getAttribute('data-cat')).then(analysis => { if (analysis && document.getElementById('llmTextIndicator')) showLLMSuggestion(analysis); });
+        analyzeTextWithLLM(description, title, element.getAttribute('data-cat'))
+            .then(analysis => { if (analysis && document.getElementById('llmTextIndicator')) showLLMSuggestion(analysis); });
     }
 };
 
@@ -1101,12 +1175,12 @@ function showErrorMessage(message, elementId) {
 
 function setLoading(isLoading) {
     const submitBtn = document.getElementById('submitBtn');
-    const btnText = document.getElementById('btnText');
+    const btnText   = document.getElementById('btnText');
     const btnLoader = document.getElementById('btnLoader');
     if (submitBtn) {
         submitBtn.disabled = isLoading;
-        if (btnText) btnText.style.display = isLoading ? 'none' : 'inline';
-        if (btnLoader) btnLoader.style.display = isLoading ? 'inline-block' : 'none';
+        if (btnText)   btnText.style.display   = isLoading ? 'none'         : 'inline';
+        if (btnLoader) btnLoader.style.display  = isLoading ? 'inline-block' : 'none';
     }
 }
 
@@ -1127,8 +1201,8 @@ function setupTextAnalysis() {
         clearTimeout(textAnalysisTimeout);
         textAnalysisTimeout = setTimeout(async () => {
             const description = document.getElementById('description')?.value;
-            const title = document.getElementById('title')?.value;
-            const category = document.getElementById('category')?.value || 'maintenance';
+            const title       = document.getElementById('title')?.value;
+            const category    = document.getElementById('category')?.value || 'maintenance';
             if (description && description.length > 15) {
                 const indicator = document.getElementById('llmTextIndicator');
                 if (indicator && !indicator.innerHTML.includes('Loading')) {
@@ -1142,7 +1216,7 @@ function setupTextAnalysis() {
         }, 1000);
     };
     if (descriptionInput) descriptionInput.addEventListener('input', triggerAnalysis);
-    if (titleInput) titleInput.addEventListener('input', triggerAnalysis);
+    if (titleInput)        titleInput.addEventListener('input', triggerAnalysis);
 }
 
 // ========== INITIALIZATION ==========
@@ -1154,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTextAnalysis();
     const reportForm = document.getElementById('reportForm');
     if (reportForm) reportForm.addEventListener('submit', handleFormSubmit);
-    console.log('✅ Report page loaded. AI will load when you upload an image. LLM will analyze text as you type.');
+    console.log('✅ Report page loaded. AI loads on image upload. LLM analyzes text as you type.');
 });
 
 // CSS animations
@@ -1187,7 +1261,6 @@ if (!document.querySelector('style[data-report-animations]')) {
         body.dark-mode .ai-indicator.success { background: #085041; }
         body.dark-mode .ai-indicator.error { background: #7F1D1D; }
         body.dark-mode .ai-dismiss-btn { background: #4B5563; color: #D1D5DB; }
-        
         .llm-popup { position: absolute; top: 0; right: -320px; width: 300px; background: var(--surface); border-radius: 16px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 0 0 1px var(--border); animation: slideInRight 0.25s cubic-bezier(0.2, 0.9, 0.4, 1.1); z-index: 100; overflow: hidden; }
         .llm-popup-header { padding: 10px 14px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
         .llm-popup-header h4 { font-size: 11px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
