@@ -2,13 +2,6 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-// Debug: Check if env vars are loaded on Vercel
-console.log('=== ENVIRONMENT CHECK ===');
-console.log('Supabase URL exists:', !!supabaseUrl);
-console.log('Supabase Key exists:', !!supabaseKey);
-console.log('Current URL:', window.location.origin);
-
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 // DOM Elements
@@ -37,100 +30,6 @@ function showEmailError(inputElement, isValid) {
         inputElement.style.borderColor = '';
     } else {
         inputElement.classList.add('domain-error');
-    }
-}
-
-// ========== Helper to get email from student ID ==========
-async function getEmailFromStudentId(studentId) {
-    try {
-        console.log('🔍 Searching for student_id:', studentId);
-        
-        const { data, error } = await supabase
-            .from('student')
-            .select('email, student_id, full_name')
-            .eq('student_id', studentId.toString().trim())
-            .maybeSingle();
-        
-        if (error) {
-            console.error('❌ Database error:', error);
-            return null;
-        }
-        
-        console.log('📊 Query result:', data);
-        
-        if (!data) {
-            console.log('⚠️ No student found with ID:', studentId);
-            return null;
-        }
-        
-        console.log('✅ Found email:', data.email);
-        return data.email;
-    } catch (error) {
-        console.error('❌ Error fetching email by student ID:', error);
-        return null;
-    }
-}
-
-// ========== Setup email input with domain for SIGNUP ==========
-function setupEmailInputWithDomain() {
-    const signupEmailInput = document.getElementById('signupEmail');
-    if (signupEmailInput) {
-        const wrapper = signupEmailInput.parentElement;
-        wrapper.style.position = 'relative';
-        
-        const suffix = document.createElement('span');
-        suffix.textContent = '@gordoncollege.edu.ph';
-        suffix.style.position = 'absolute';
-        suffix.style.right = '12px';
-        suffix.style.top = '50%';
-        suffix.style.transform = 'translateY(-50%)';
-        suffix.style.fontSize = '12px';
-        suffix.style.color = '#64748b';
-        suffix.style.backgroundColor = '#f1f5f9';
-        suffix.style.padding = '2px 8px';
-        suffix.style.borderRadius = '4px';
-        suffix.style.pointerEvents = 'none';
-        wrapper.appendChild(suffix);
-        
-        signupEmailInput.style.paddingRight = '160px';
-        
-        signupEmailInput.addEventListener('input', function(e) {
-            let value = this.value;
-            if (value.includes('@gordoncollege.edu.ph')) {
-                value = value.replace('@gordoncollege.edu.ph', '');
-                this.value = value;
-            }
-            if (value.includes('@')) {
-                value = value.replace('@', '');
-                this.value = value;
-            }
-        });
-        
-        const hint = document.createElement('div');
-        hint.className = 'email-hint';
-        hint.style.marginTop = '5px';
-        hint.innerHTML = '<i class="fas fa-info-circle"></i> Just type your Student ID';
-        signupEmailInput.parentElement.parentElement.appendChild(hint);
-    }
-}
-
-// ========== Setup LOGIN input with hint ==========
-function setupLoginInput() {
-    const loginInput = document.getElementById('loginEmail');
-    if (loginInput) {
-        loginInput.placeholder = "Enter your Student ID Number";
-        
-        const hint = document.createElement('div');
-        hint.className = 'email-hint';
-        hint.style.marginTop = '5px';
-        hint.innerHTML = '<i class="fas fa-info-circle"></i> Just enter your Student ID number (e.g., 2021-12345)';
-        loginInput.parentElement.parentElement.appendChild(hint);
-        
-        const icon = loginInput.parentElement.querySelector('i');
-        if (icon) {
-            icon.classList.remove('fa-envelope');
-            icon.classList.add('fa-id-card');
-        }
     }
 }
 
@@ -302,87 +201,75 @@ async function updateStudentActivityOnLogin(userId) {
     }
 }
 
-// ========== TEST DATABASE CONNECTION ==========
-async function testDatabaseConnection() {
-    try {
-        console.log('📡 Testing database connection...');
-        const { data, error } = await supabase
-            .from('student')
-            .select('count')
-            .limit(1);
-        
-        if (error) {
-            console.error('❌ Database connection failed:', error);
-            return false;
-        }
-        console.log('✅ Database connected successfully');
-        return true;
-    } catch (err) {
-        console.error('❌ Connection error:', err);
-        return false;
-    }
+// ========== REAL-TIME EMAIL VALIDATION ==========
+const loginEmailInput = document.getElementById('loginEmail');
+if (loginEmailInput) {
+    loginEmailInput.addEventListener('input', function () {
+        showEmailError(this, isValidGordonEmail(this.value));
+    });
 }
+
+const signupEmailInput = document.getElementById('signupEmail');
+if (signupEmailInput) {
+    signupEmailInput.addEventListener('input', function () {
+        showEmailError(this, isValidGordonEmail(this.value));
+    });
+}
+
+// ========== FORM TOGGLE ==========
+if (showSignupBtn) {
+    showSignupBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        studentLoginCard.style.display = 'none';
+        signupForm.style.display = 'block';
+        applySlideUpAnimation(signupForm);
+    });
+}
+
+if (showLoginBtn) {
+    showLoginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        signupForm.style.display = 'none';
+        studentLoginCard.style.display = 'block';
+        applySlideUpAnimation(studentLoginCard);
+    });
+}
+
+// ========== PASSWORD TOGGLES ==========
+togglePasswordVisibility(
+    document.getElementById('loginPassword'),
+    document.getElementById('toggleLoginPassword')
+);
+togglePasswordVisibility(
+    document.getElementById('signupPassword'),
+    document.getElementById('toggleSignupPassword')
+);
 
 // ========== LOGIN ==========
 if (loginBtn) {
     loginBtn.addEventListener('click', async () => {
-        const studentId = document.getElementById('loginEmail').value.trim();
+        const email    = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
 
-        console.log('=== LOGIN ATTEMPT ===');
-        console.log('Entered Student ID:', studentId);
+        if (!email || !password) {
+            showNotification('Please fill in all fields', true);
+            return;
+        }
 
-        if (!studentId || !password) {
-            showNotification('Please enter your Student ID and Password', true);
+        if (!isValidGordonEmail(email)) {
+            showNotification('Please use your @gordoncollege.edu.ph email address.', true);
+            document.getElementById('loginEmail').classList.add('domain-error');
             return;
         }
 
         showLoader();
 
         try {
-            console.log('📡 Checking database for student_id:', studentId);
-            
-            const { data: studentRecord, error: dbError } = await supabase
-                .from('student')
-                .select('*')
-                .eq('student_id', studentId)
-                .maybeSingle();
-            
-            console.log('📋 Database query result:', studentRecord);
-            
-            if (dbError) {
-                console.error('❌ Database error:', dbError);
-                showNotification('Database error. Please try again.', true);
-                hideLoader();
-                return;
-            }
-            
-            if (!studentRecord) {
-                console.log('❌ No student found with ID:', studentId);
-                showNotification('Student ID not found. Please sign up first.', true);
-                hideLoader();
-                return;
-            }
-            
-            console.log('✅ Student found! Email:', studentRecord.email);
-            
-            const email = studentRecord.email;
-            
-            if (!email) {
-                console.error('❌ Student record has no email!');
-                showNotification('Account has no email. Please contact support.', true);
-                hideLoader();
-                return;
-            }
-
-            console.log('🔐 Attempting Supabase auth login with email:', email);
-
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             
             if (error) {
-                console.error('❌ Auth error:', error);
                 if (error.message.includes('Invalid login credentials')) {
-                    throw new Error('Invalid Student ID or password. Please try again.');
+                    throw new Error('Invalid email or password. Please try again.');
                 } else if (error.message.includes('Email not confirmed')) {
                     throw new Error('Please verify your email first. Check your inbox for the confirmation link.');
                 } else {
@@ -390,11 +277,7 @@ if (loginBtn) {
                 }
             }
             
-            if (!data.user) {
-                throw new Error('Login failed — no user returned.');
-            }
-            
-            console.log('✅ Auth successful! User ID:', data.user.id);
+            if (!data.user) throw new Error('Login failed — no user returned.');
 
             if (!data.user.email_confirmed_at) {
                 const { error: resendError } = await supabase.auth.resend({
@@ -411,14 +294,69 @@ if (loginBtn) {
                 return;
             }
 
+            const { data: studentData, error: dbError } = await supabase
+                .from('student')
+                .select('*')
+                .eq('id', data.user.id)
+                .maybeSingle();
+
+            if (dbError) {
+                console.error('Database error:', dbError);
+                throw new Error('Error fetching user data. Please try again.');
+            }
+
+            if (!studentData) {
+                console.log('Student record missing, creating one...');
+                const { error: insertError } = await supabase
+                    .from('student')
+                    .insert([{
+                        id: data.user.id,
+                        full_name: data.user.user_metadata?.full_name || email.split('@')[0],
+                        student_id: data.user.user_metadata?.student_id || 'N/A',
+                        email: email,
+                        status: 'active',
+                        is_active: true,
+                        last_login: new Date().toISOString(),
+                        last_logout: null
+                    }]);
+                
+                if (insertError) {
+                    console.error('Insert error:', insertError);
+                    throw new Error('Account setup failed. Please contact support.');
+                }
+                
+                const { data: newStudentData } = await supabase
+                    .from('student')
+                    .select('*')
+                    .eq('id', data.user.id)
+                    .single();
+                    
+                if (newStudentData) {
+                    localStorage.setItem('currentStudent', JSON.stringify({
+                        name:      newStudentData.full_name,
+                        studentId: newStudentData.student_id,
+                        email:     newStudentData.email,
+                        userId:    data.user.id,
+                        status:    'active'
+                    }));
+                    
+                    showNotification('Login successful! Redirecting...', false, 1500);
+                    setTimeout(() => {
+                        window.location.href = '/Assets/Student_dashboard/SDB.html';
+                    }, 1500);
+                    hideLoader();
+                    return;
+                }
+            }
+
             await updateStudentActivityOnLogin(data.user.id);
 
             localStorage.setItem('currentStudent', JSON.stringify({
-                name: studentRecord.full_name,
-                studentId: studentRecord.student_id,
-                email: studentRecord.email,
-                userId: data.user.id,
-                status: 'active'
+                name:      studentData.full_name,
+                studentId: studentData.student_id,
+                email:     studentData.email,
+                userId:    data.user.id,
+                status:    'active'
             }));
 
             showNotification('Login successful! Redirecting...', false, 1500);
@@ -427,35 +365,28 @@ if (loginBtn) {
             }, 1500);
 
         } catch (error) {
-            console.error('❌ Login error:', error);
+            console.error('Login error:', error);
             showNotification(error.message || 'Login failed. Please check your credentials.', true);
             hideLoader();
         }
     });
 }
 
-// ========== SIGNUP ==========
+// ========== SIGNUP WITH EMAIL CONFIRMATION ==========
 if (signupBtn) {
     signupBtn.addEventListener('click', async () => {
-        const fullName = document.getElementById('signupName').value.trim();
+        const fullName  = document.getElementById('signupName').value.trim();
         const studentId = document.getElementById('signupStudentId').value.trim();
-        let username = document.getElementById('signupEmail').value.trim();
-        const password = document.getElementById('signupPassword').value;
+        const email     = document.getElementById('signupEmail').value.trim();
+        const password  = document.getElementById('signupPassword').value;
 
-        console.log('=== SIGNUP ATTEMPT ===');
-        console.log('Full Name:', fullName);
-        console.log('Student ID:', studentId);
-
-        if (!fullName || !studentId || !username || !password) {
+        if (!fullName || !studentId || !email || !password) {
             showNotification('Please fill in all fields', true);
             return;
         }
 
-        let email = username + '@gordoncollege.edu.ph';
-        email = email.replace(/@+/g, '@');
-
         if (!isValidGordonEmail(email)) {
-            showNotification('Invalid email format. Please use a valid username.', true);
+            showNotification('You must register with a @gordoncollege.edu.ph email.', true);
             document.getElementById('signupEmail').classList.add('domain-error');
             return;
         }
@@ -468,8 +399,6 @@ if (signupBtn) {
         showLoader();
 
         try {
-            console.log('📡 Checking if student_id exists:', studentId);
-            
             const { data: existingId } = await supabase
                 .from('student')
                 .select('student_id')
@@ -477,14 +406,11 @@ if (signupBtn) {
                 .maybeSingle();
 
             if (existingId) {
-                console.log('❌ Student ID already exists:', studentId);
                 hideLoader();
                 showNotification('Student ID already registered. Please login.', true);
                 return;
             }
 
-            console.log('📡 Checking if email exists:', email);
-            
             const { data: existingEmail } = await supabase
                 .from('student')
                 .select('email')
@@ -492,14 +418,11 @@ if (signupBtn) {
                 .maybeSingle();
 
             if (existingEmail) {
-                console.log('❌ Email already exists:', email);
                 hideLoader();
                 showNotification('Email already registered. Please login.', true);
                 return;
             }
 
-            console.log('🔐 Creating Supabase auth user...');
-            
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
@@ -515,27 +438,20 @@ if (signupBtn) {
             if (error) throw error;
             if (!data.user) throw new Error('Signup failed.');
 
-            console.log('✅ Auth user created. User ID:', data.user.id);
-
             const { error: dbError } = await supabase
                 .from('student')
                 .insert([{
-                    id: data.user.id,
-                    full_name: fullName,
-                    student_id: studentId,
-                    email: email,
-                    status: 'pending',
-                    is_active: false,
-                    last_login: null,
+                    id:          data.user.id,
+                    full_name:   fullName,
+                    student_id:  studentId,
+                    email:       email,
+                    status:      'pending',  
+                    is_active:   false,      
+                    last_login:  null,
                     last_logout: null
                 }]);
 
-            if (dbError) {
-                console.error('❌ Database insert error:', dbError);
-                throw dbError;
-            }
-
-            console.log('✅ Student record created successfully!');
+            if (dbError) throw dbError;
 
             showNotification('✅ Account created! Please check your email to verify your account before logging in.', false, 6000);
             
@@ -562,7 +478,7 @@ if (signupBtn) {
             }, 3000);
 
         } catch (error) {
-            console.error('❌ Signup error:', error);
+            console.error('Signup error:', error);
             showNotification(error.message || 'Signup failed. Please try again.', true);
             hideLoader();
         }
@@ -579,8 +495,8 @@ window.studentLogout = async function () {
             const { error } = await supabase
                 .from('student')
                 .update({
-                    status: 'inactive',
-                    is_active: false,
+                    status:      'inactive',
+                    is_active:   false,
                     last_logout: new Date().toISOString()
                 })
                 .eq('id', student.userId);
@@ -725,18 +641,18 @@ function showEmailPrompt() {
 
         document.body.appendChild(modal);
 
-        const input = modal.querySelector('#promptEmail');
+        const input     = modal.querySelector('#promptEmail');
         const submitBtn = modal.querySelector('.email-prompt-submit');
         const cancelBtn = modal.querySelector('.email-prompt-cancel');
-        const closeBtn = modal.querySelector('.email-prompt-close');
-        const overlay = modal.querySelector('.email-prompt-overlay');
+        const closeBtn  = modal.querySelector('.email-prompt-close');
+        const overlay   = modal.querySelector('.email-prompt-overlay');
 
         const cleanup = () => modal.remove();
 
         submitBtn.onclick = () => { const v = input.value.trim(); cleanup(); resolve(v || null); };
         cancelBtn.onclick = () => { cleanup(); resolve(null); };
-        closeBtn.onclick = () => { cleanup(); resolve(null); };
-        overlay.onclick = () => { cleanup(); resolve(null); };
+        closeBtn.onclick  = () => { cleanup(); resolve(null); };
+        overlay.onclick   = () => { cleanup(); resolve(null); };
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') { const v = input.value.trim(); cleanup(); resolve(v || null); }
         });
@@ -766,35 +682,6 @@ function addStyles() {
     document.head.appendChild(style);
 }
 
-// ========== PASSWORD TOGGLES ==========
-togglePasswordVisibility(
-    document.getElementById('loginPassword'),
-    document.getElementById('toggleLoginPassword')
-);
-togglePasswordVisibility(
-    document.getElementById('signupPassword'),
-    document.getElementById('toggleSignupPassword')
-);
-
-// ========== FORM TOGGLE ==========
-if (showSignupBtn) {
-    showSignupBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        studentLoginCard.style.display = 'none';
-        signupForm.style.display = 'block';
-        applySlideUpAnimation(signupForm);
-    });
-}
-
-if (showLoginBtn) {
-    showLoginBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        signupForm.style.display = 'none';
-        studentLoginCard.style.display = 'block';
-        applySlideUpAnimation(studentLoginCard);
-    });
-}
-
 // ========== SESSION CHECK ==========
 async function checkExistingSession() {
     const stored = localStorage.getItem('currentStudent');
@@ -817,12 +704,9 @@ async function checkExistingSession() {
 }
 
 // ========== INIT ==========
-async function init() {
+function init() {
     addStyles();
-    setupLoginInput(); 
-    setupEmailInputWithDomain(); 
-    await testDatabaseConnection(); // Test database connection
-    await checkExistingSession();
+    checkExistingSession();
     console.log('✅ Login page ready');
 }
 
