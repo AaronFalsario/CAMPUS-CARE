@@ -2,6 +2,13 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+// Debug: Check if env vars are loaded on Vercel
+console.log('=== ENVIRONMENT CHECK ===');
+console.log('Supabase URL exists:', !!supabaseUrl);
+console.log('Supabase Key exists:', !!supabaseKey);
+console.log('Current URL:', window.location.origin);
+
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 // DOM Elements
@@ -37,7 +44,6 @@ function showEmailError(inputElement, isValid) {
 async function getEmailFromStudentId(studentId) {
     try {
         console.log('🔍 Searching for student_id:', studentId);
-        console.log('Type of student_id:', typeof studentId);
         
         const { data, error } = await supabase
             .from('student')
@@ -69,7 +75,6 @@ async function getEmailFromStudentId(studentId) {
 function setupEmailInputWithDomain() {
     const signupEmailInput = document.getElementById('signupEmail');
     if (signupEmailInput) {
-        // Add visual suffix
         const wrapper = signupEmailInput.parentElement;
         wrapper.style.position = 'relative';
         
@@ -87,28 +92,24 @@ function setupEmailInputWithDomain() {
         suffix.style.pointerEvents = 'none';
         wrapper.appendChild(suffix);
         
-        // Adjust input padding
         signupEmailInput.style.paddingRight = '160px';
         
         signupEmailInput.addEventListener('input', function(e) {
             let value = this.value;
-            // Remove @gordoncollege.edu.ph if user tries to type it
             if (value.includes('@gordoncollege.edu.ph')) {
                 value = value.replace('@gordoncollege.edu.ph', '');
                 this.value = value;
             }
-            // Remove @ symbol if typed
             if (value.includes('@')) {
                 value = value.replace('@', '');
                 this.value = value;
             }
         });
         
-        // Add hint text
         const hint = document.createElement('div');
         hint.className = 'email-hint';
         hint.style.marginTop = '5px';
-        hint.innerHTML = '<i class="fas fa-info-circle"></i> Just type you Student ID';
+        hint.innerHTML = '<i class="fas fa-info-circle"></i> Just type your Student ID';
         signupEmailInput.parentElement.parentElement.appendChild(hint);
     }
 }
@@ -117,17 +118,14 @@ function setupEmailInputWithDomain() {
 function setupLoginInput() {
     const loginInput = document.getElementById('loginEmail');
     if (loginInput) {
-        // Add placeholder hint
         loginInput.placeholder = "Enter your Student ID Number";
         
-        // Add hint text below
         const hint = document.createElement('div');
         hint.className = 'email-hint';
         hint.style.marginTop = '5px';
         hint.innerHTML = '<i class="fas fa-info-circle"></i> Just enter your Student ID number (e.g., 2021-12345)';
         loginInput.parentElement.parentElement.appendChild(hint);
         
-        // Change icon to ID card
         const icon = loginInput.parentElement.querySelector('i');
         if (icon) {
             icon.classList.remove('fa-envelope');
@@ -304,7 +302,28 @@ async function updateStudentActivityOnLogin(userId) {
     }
 }
 
-// ========== UPDATED LOGIN - Only accepts Student ID ==========
+// ========== TEST DATABASE CONNECTION ==========
+async function testDatabaseConnection() {
+    try {
+        console.log('📡 Testing database connection...');
+        const { data, error } = await supabase
+            .from('student')
+            .select('count')
+            .limit(1);
+        
+        if (error) {
+            console.error('❌ Database connection failed:', error);
+            return false;
+        }
+        console.log('✅ Database connected successfully');
+        return true;
+    } catch (err) {
+        console.error('❌ Connection error:', err);
+        return false;
+    }
+}
+
+// ========== LOGIN ==========
 if (loginBtn) {
     loginBtn.addEventListener('click', async () => {
         const studentId = document.getElementById('loginEmail').value.trim();
@@ -312,7 +331,6 @@ if (loginBtn) {
 
         console.log('=== LOGIN ATTEMPT ===');
         console.log('Entered Student ID:', studentId);
-        console.log('Password length:', password?.length);
 
         if (!studentId || !password) {
             showNotification('Please enter your Student ID and Password', true);
@@ -322,7 +340,6 @@ if (loginBtn) {
         showLoader();
 
         try {
-            // DIRECT DATABASE CHECK - See what's in the database
             console.log('📡 Checking database for student_id:', studentId);
             
             const { data: studentRecord, error: dbError } = await supabase
@@ -342,7 +359,6 @@ if (loginBtn) {
             
             if (!studentRecord) {
                 console.log('❌ No student found with ID:', studentId);
-                console.log('💡 Tip: Check if the student_id exists in your database table');
                 showNotification('Student ID not found. Please sign up first.', true);
                 hideLoader();
                 return;
@@ -418,7 +434,7 @@ if (loginBtn) {
     });
 }
 
-// ========== UPDATED SIGNUP ==========
+// ========== SIGNUP ==========
 if (signupBtn) {
     signupBtn.addEventListener('click', async () => {
         const fullName = document.getElementById('signupName').value.trim();
@@ -429,7 +445,6 @@ if (signupBtn) {
         console.log('=== SIGNUP ATTEMPT ===');
         console.log('Full Name:', fullName);
         console.log('Student ID:', studentId);
-        console.log('Username:', username);
 
         if (!fullName || !studentId || !username || !password) {
             showNotification('Please fill in all fields', true);
@@ -501,7 +516,6 @@ if (signupBtn) {
             if (!data.user) throw new Error('Signup failed.');
 
             console.log('✅ Auth user created. User ID:', data.user.id);
-            console.log('📝 Inserting into student table...');
 
             const { error: dbError } = await supabase
                 .from('student')
@@ -522,7 +536,6 @@ if (signupBtn) {
             }
 
             console.log('✅ Student record created successfully!');
-            console.log('📊 Inserted data:', { fullName, studentId, email });
 
             showNotification('✅ Account created! Please check your email to verify your account before logging in.', false, 6000);
             
@@ -804,11 +817,12 @@ async function checkExistingSession() {
 }
 
 // ========== INIT ==========
-function init() {
+async function init() {
     addStyles();
     setupLoginInput(); 
     setupEmailInputWithDomain(); 
-    checkExistingSession();
+    await testDatabaseConnection(); // Test database connection
+    await checkExistingSession();
     console.log('✅ Login page ready');
 }
 
