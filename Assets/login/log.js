@@ -36,16 +36,31 @@ function showEmailError(inputElement, isValid) {
 // ========== Helper to get email from student ID ==========
 async function getEmailFromStudentId(studentId) {
     try {
+        console.log('🔍 Searching for student_id:', studentId);
+        console.log('Type of student_id:', typeof studentId);
+        
         const { data, error } = await supabase
             .from('student')
-            .select('email')
-            .eq('student_id', studentId.trim())
+            .select('email, student_id, full_name')
+            .eq('student_id', studentId.toString().trim())
             .maybeSingle();
         
-        if (error) throw error;
-        return data ? data.email : null;
+        if (error) {
+            console.error('❌ Database error:', error);
+            return null;
+        }
+        
+        console.log('📊 Query result:', data);
+        
+        if (!data) {
+            console.log('⚠️ No student found with ID:', studentId);
+            return null;
+        }
+        
+        console.log('✅ Found email:', data.email);
+        return data.email;
     } catch (error) {
-        console.error('Error fetching email by student ID:', error);
+        console.error('❌ Error fetching email by student ID:', error);
         return null;
     }
 }
@@ -292,9 +307,12 @@ async function updateStudentActivityOnLogin(userId) {
 // ========== UPDATED LOGIN - Only accepts Student ID ==========
 if (loginBtn) {
     loginBtn.addEventListener('click', async () => {
-        // Get the student ID (now only ID, no email)
         const studentId = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
+
+        console.log('=== LOGIN ATTEMPT ===');
+        console.log('Entered Student ID:', studentId);
+        console.log('Password length:', password?.length);
 
         if (!studentId || !password) {
             showNotification('Please enter your Student ID and Password', true);
@@ -304,19 +322,49 @@ if (loginBtn) {
         showLoader();
 
         try {
-            // Get email from student ID
-            const email = await getEmailFromStudentId(studentId);
+            // DIRECT DATABASE CHECK - See what's in the database
+            console.log('📡 Checking database for student_id:', studentId);
+            
+            const { data: studentRecord, error: dbError } = await supabase
+                .from('student')
+                .select('*')
+                .eq('student_id', studentId)
+                .maybeSingle();
+            
+            console.log('📋 Database query result:', studentRecord);
+            
+            if (dbError) {
+                console.error('❌ Database error:', dbError);
+                showNotification('Database error. Please try again.', true);
+                hideLoader();
+                return;
+            }
+            
+            if (!studentRecord) {
+                console.log('❌ No student found with ID:', studentId);
+                console.log('💡 Tip: Check if the student_id exists in your database table');
+                showNotification('Student ID not found. Please sign up first.', true);
+                hideLoader();
+                return;
+            }
+            
+            console.log('✅ Student found! Email:', studentRecord.email);
+            
+            const email = studentRecord.email;
             
             if (!email) {
-                showNotification('Student ID not found. Please check your ID or sign up first.', true);
+                console.error('❌ Student record has no email!');
+                showNotification('Account has no email. Please contact support.', true);
                 hideLoader();
                 return;
             }
 
-            // Login with the email
+            console.log('🔐 Attempting Supabase auth login with email:', email);
+
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             
             if (error) {
+                console.error('❌ Auth error:', error);
                 if (error.message.includes('Invalid login credentials')) {
                     throw new Error('Invalid Student ID or password. Please try again.');
                 } else if (error.message.includes('Email not confirmed')) {
@@ -326,7 +374,11 @@ if (loginBtn) {
                 }
             }
             
-            if (!data.user) throw new Error('Login failed — no user returned.');
+            if (!data.user) {
+                throw new Error('Login failed — no user returned.');
+            }
+            
+            console.log('✅ Auth successful! User ID:', data.user.id);
 
             if (!data.user.email_confirmed_at) {
                 const { error: resendError } = await supabase.auth.resend({
@@ -343,67 +395,12 @@ if (loginBtn) {
                 return;
             }
 
-            const { data: studentData, error: dbError } = await supabase
-                .from('student')
-                .select('*')
-                .eq('id', data.user.id)
-                .maybeSingle();
-
-            if (dbError) {
-                console.error('Database error:', dbError);
-                throw new Error('Error fetching user data. Please try again.');
-            }
-
-            if (!studentData) {
-                console.log('Student record missing, creating one...');
-                const { error: insertError } = await supabase
-                    .from('student')
-                    .insert([{
-                        id: data.user.id,
-                        full_name: data.user.user_metadata?.full_name || email.split('@')[0],
-                        student_id: studentId,
-                        email: email,
-                        status: 'active',
-                        is_active: true,
-                        last_login: new Date().toISOString(),
-                        last_logout: null
-                    }]);
-                
-                if (insertError) {
-                    console.error('Insert error:', insertError);
-                    throw new Error('Account setup failed. Please contact support.');
-                }
-                
-                const { data: newStudentData } = await supabase
-                    .from('student')
-                    .select('*')
-                    .eq('id', data.user.id)
-                    .single();
-                    
-                if (newStudentData) {
-                    localStorage.setItem('currentStudent', JSON.stringify({
-                        name: newStudentData.full_name,
-                        studentId: newStudentData.student_id,
-                        email: newStudentData.email,
-                        userId: data.user.id,
-                        status: 'active'
-                    }));
-                    
-                    showNotification('Login successful! Redirecting...', false, 1500);
-                    setTimeout(() => {
-                        window.location.href = '/Assets/Student_dashboard/SDB.html';
-                    }, 1500);
-                    hideLoader();
-                    return;
-                }
-            }
-
             await updateStudentActivityOnLogin(data.user.id);
 
             localStorage.setItem('currentStudent', JSON.stringify({
-                name: studentData.full_name,
-                studentId: studentData.student_id,
-                email: studentData.email,
+                name: studentRecord.full_name,
+                studentId: studentRecord.student_id,
+                email: studentRecord.email,
                 userId: data.user.id,
                 status: 'active'
             }));
@@ -414,7 +411,7 @@ if (loginBtn) {
             }, 1500);
 
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('❌ Login error:', error);
             showNotification(error.message || 'Login failed. Please check your credentials.', true);
             hideLoader();
         }
@@ -424,20 +421,22 @@ if (loginBtn) {
 // ========== UPDATED SIGNUP ==========
 if (signupBtn) {
     signupBtn.addEventListener('click', async () => {
-        const fullName  = document.getElementById('signupName').value.trim();
+        const fullName = document.getElementById('signupName').value.trim();
         const studentId = document.getElementById('signupStudentId').value.trim();
         let username = document.getElementById('signupEmail').value.trim();
-        const password  = document.getElementById('signupPassword').value;
+        const password = document.getElementById('signupPassword').value;
+
+        console.log('=== SIGNUP ATTEMPT ===');
+        console.log('Full Name:', fullName);
+        console.log('Student ID:', studentId);
+        console.log('Username:', username);
 
         if (!fullName || !studentId || !username || !password) {
             showNotification('Please fill in all fields', true);
             return;
         }
 
-        // Auto-append domain
         let email = username + '@gordoncollege.edu.ph';
-
-        // Remove any @ symbol if user accidentally typed it
         email = email.replace(/@+/g, '@');
 
         if (!isValidGordonEmail(email)) {
@@ -454,6 +453,8 @@ if (signupBtn) {
         showLoader();
 
         try {
+            console.log('📡 Checking if student_id exists:', studentId);
+            
             const { data: existingId } = await supabase
                 .from('student')
                 .select('student_id')
@@ -461,11 +462,14 @@ if (signupBtn) {
                 .maybeSingle();
 
             if (existingId) {
+                console.log('❌ Student ID already exists:', studentId);
                 hideLoader();
                 showNotification('Student ID already registered. Please login.', true);
                 return;
             }
 
+            console.log('📡 Checking if email exists:', email);
+            
             const { data: existingEmail } = await supabase
                 .from('student')
                 .select('email')
@@ -473,11 +477,14 @@ if (signupBtn) {
                 .maybeSingle();
 
             if (existingEmail) {
+                console.log('❌ Email already exists:', email);
                 hideLoader();
                 showNotification('Email already registered. Please login.', true);
                 return;
             }
 
+            console.log('🔐 Creating Supabase auth user...');
+            
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
@@ -493,6 +500,9 @@ if (signupBtn) {
             if (error) throw error;
             if (!data.user) throw new Error('Signup failed.');
 
+            console.log('✅ Auth user created. User ID:', data.user.id);
+            console.log('📝 Inserting into student table...');
+
             const { error: dbError } = await supabase
                 .from('student')
                 .insert([{
@@ -500,13 +510,19 @@ if (signupBtn) {
                     full_name: fullName,
                     student_id: studentId,
                     email: email,
-                    status: 'pending',  
-                    is_active: false,      
+                    status: 'pending',
+                    is_active: false,
                     last_login: null,
                     last_logout: null
                 }]);
 
-            if (dbError) throw dbError;
+            if (dbError) {
+                console.error('❌ Database insert error:', dbError);
+                throw dbError;
+            }
+
+            console.log('✅ Student record created successfully!');
+            console.log('📊 Inserted data:', { fullName, studentId, email });
 
             showNotification('✅ Account created! Please check your email to verify your account before logging in.', false, 6000);
             
@@ -533,7 +549,7 @@ if (signupBtn) {
             }, 3000);
 
         } catch (error) {
-            console.error('Signup error:', error);
+            console.error('❌ Signup error:', error);
             showNotification(error.message || 'Signup failed. Please try again.', true);
             hideLoader();
         }
