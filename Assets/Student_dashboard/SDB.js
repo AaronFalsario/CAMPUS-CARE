@@ -271,8 +271,51 @@ function showNotificationToast(notification) {
     const toastColor = isFireAlert ? '#DC2626' : '#1D9E75';
     const icon = isFireAlert ? '🔥🚨' : (notification.type === 'report_resolved' ? '✅' : '📢');
     const toast = document.createElement('div');
-    toast.style.cssText = `position:fixed;bottom:80px;right:20px;background:var(--surface);border-left:4px solid ${toastColor};border-radius:12px;padding:14px 18px;box-shadow:0 8px 24px rgba(0,0,0,0.2);z-index:10000;animation:slideIn 0.3s ease;max-width:350px;color:var(--text);border:1px solid var(--border);cursor:pointer;`;
-    toast.innerHTML = `<div style="display:flex;align-items:start;gap:12px;"><div style="font-size:24px;">${icon}</div><div style="flex:1;"><div style="font-weight:600;margin-bottom:4px;${isFireAlert ? 'color:#DC2626;' : ''}">${escapeHtml(notification.title)}</div><div style="font-size:13px;color:var(--text-secondary);">${escapeHtml(notification.message)}</div><div style="font-size:11px;color:var(--muted);margin-top:6px;">${getTimeAgo(new Date(notification.timestamp))}</div></div></div>`;
+    
+    // Check if mobile viewport
+    const isMobile = window.innerWidth <= 768;
+    
+    // Position calculation - ABOVE bottom nav on mobile
+    let bottomPosition = isMobile ? 'calc(65px + 16px)' : '80px';
+    let rightPosition = isMobile ? '16px' : '20px';
+    let leftPosition = isMobile ? '16px' : 'auto';
+    let textAlign = isMobile ? 'center' : 'left';
+    let whiteSpace = isMobile ? 'normal' : 'nowrap';
+    
+    toast.style.cssText = `
+        position: fixed;
+        bottom: ${bottomPosition};
+        right: ${rightPosition};
+        left: ${leftPosition};
+        background: var(--surface);
+        border-left: 4px solid ${toastColor};
+        border-radius: 12px;
+        padding: ${isMobile ? '10px 16px' : '14px 18px'};
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        z-index: 10000;
+        animation: slideInToast 0.3s ease;
+        max-width: ${isMobile ? 'none' : '350px'};
+        color: var(--text);
+        border: 1px solid var(--border);
+        cursor: pointer;
+        text-align: ${textAlign};
+        white-space: ${whiteSpace};
+        font-size: ${isMobile ? '12px' : '14px'};
+        width: ${isMobile ? 'auto' : 'auto'};
+        margin: ${isMobile ? '0' : '0'};
+    `;
+    
+    toast.innerHTML = `
+        <div style="display:flex;align-items:${isMobile ? 'center' : 'flex-start'};gap:12px;">
+            <div style="font-size:${isMobile ? '20px' : '24px'};">${icon}</div>
+            <div style="flex:1;">
+                <div style="font-weight:600;margin-bottom:4px;${isFireAlert ? 'color:#DC2626;' : ''}">${escapeHtml(notification.title)}</div>
+                <div style="font-size:${isMobile ? '11px' : '13px'};color:var(--text-secondary);">${escapeHtml(notification.message)}</div>
+                <div style="font-size:${isMobile ? '9px' : '11px'};color:var(--muted);margin-top:6px;">${getTimeAgo(new Date(notification.timestamp))}</div>
+            </div>
+        </div>
+    `;
+    
     if (notification.report_id) {
         toast.addEventListener('click', () => {
             const report = allIncidents.find(r => String(r.id) === String(notification.report_id));
@@ -280,21 +323,29 @@ function showNotificationToast(notification) {
             toast.remove();
         });
     }
+    
     document.body.appendChild(toast);
+    
     if (isFireAlert) {
         try {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            oscillator.connect(gainNode); gainNode.connect(audioContext.destination);
-            oscillator.frequency.value = 880; gainNode.gain.value = 0.3;
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.frequency.value = 880;
+            gainNode.gain.value = 0.3;
             oscillator.start();
             gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 1);
             oscillator.stop(audioContext.currentTime + 1);
         } catch(e) {}
     }
+    
     const duration = isFireAlert ? 10000 : 6000;
-    setTimeout(() => { toast.style.animation = 'slideOut 0.3s ease'; setTimeout(() => toast.remove(), 300); }, duration);
+    setTimeout(() => {
+        toast.style.animation = 'slideOutToast 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
 }
 
 function updateNotificationBell() {
@@ -845,10 +896,31 @@ function escapeHtml(text) {
 
 function showNotification(message, type = 'success') {
     const n = document.createElement('div');
+    const isMobile = window.innerWidth <= 768;
+    
     n.textContent = message;
-    n.style.cssText = `position:fixed;bottom:20px;right:20px;padding:12px 24px;background:${type === 'error' ? '#DC2626' : type === 'warning' ? '#F59E0B' : type === 'info' ? '#3B82F6' : '#10B981'};color:white;border-radius:8px;z-index:10000;animation:slideIn 0.3s ease;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-width:350px;`;
+    n.style.cssText = `
+        position: fixed;
+        bottom: ${isMobile ? 'calc(65px + 16px)' : '30px'};
+        right: ${isMobile ? '16px' : '30px'};
+        left: ${isMobile ? '16px' : 'auto'};
+        padding: ${isMobile ? '10px 16px' : '12px 24px'};
+        background: ${type === 'error' ? '#DC2626' : type === 'warning' ? '#F59E0B' : type === 'info' ? '#3B82F6' : '#10B981'};
+        color: white;
+        border-radius: ${isMobile ? '28px' : '8px'};
+        z-index: 10001;
+        animation: slideInToast 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        max-width: ${isMobile ? 'none' : '350px'};
+        text-align: ${isMobile ? 'center' : 'left'};
+        font-size: ${isMobile ? '12px' : '14px'};
+        width: ${isMobile ? 'auto' : 'auto'};
+    `;
     document.body.appendChild(n);
-    setTimeout(() => { n.style.animation = 'slideOut 0.3s ease'; setTimeout(() => n.remove(), 300); }, 3000);
+    setTimeout(() => {
+        n.style.animation = 'slideOutToast 0.3s ease';
+        setTimeout(() => n.remove(), 300);
+    }, 3000);
 }
 
 function toggleViewMode() {
