@@ -13,6 +13,7 @@ let realtimeSubscription = null;
 let isInitialLoad = true;
 let pollingInterval = null;
 let isSavingToStorage = false;
+let activeToasts = [];
 
 const RESOLVED_RETENTION_HOURS = 24;
 
@@ -48,6 +49,129 @@ function loadNotifications() {
 function saveNotifications() {
     localStorage.setItem('admin_notifications', JSON.stringify(notifications));
     updateNotificationBadge();
+}
+
+// ========== IMPROVED TOAST NOTIFICATION ==========
+function showToastMessage(message, type = 'success') {
+    // Remove existing toasts
+    activeToasts.forEach(toast => {
+        if (toast && toast.parentNode) {
+            if (toast.dataset.timeoutId) clearTimeout(parseInt(toast.dataset.timeoutId));
+            toast.remove();
+        }
+    });
+    activeToasts = [];
+    
+    const toast = document.createElement('div');
+    const isMobile = window.innerWidth <= 768;
+    
+    let icon = '';
+    let bgColor = '';
+    let borderColor = '';
+    
+    switch (type) {
+        case 'success': icon = '✓'; bgColor = '#10B981'; borderColor = '#059669'; break;
+        case 'error': icon = '✗'; bgColor = '#DC2626'; borderColor = '#991B1B'; break;
+        case 'warning': icon = '⚠️'; bgColor = '#F59E0B'; borderColor = '#D97706'; break;
+        case 'info': icon = 'ℹ️'; bgColor = '#3B82F6'; borderColor = '#2563EB'; break;
+        case 'urgent': icon = '🚨'; bgColor = '#DC2626'; borderColor = '#991B1B'; break;
+        case 'delete': icon = '🗑️'; bgColor = '#EF4444'; borderColor = '#B91C1C'; break;
+        default: icon = '✓'; bgColor = '#10B981'; borderColor = '#059669';
+    }
+    
+    toast.style.cssText = `
+        position: fixed;
+        ${isMobile ? 'bottom: 70px; left: 16px; right: 16px;' : 'bottom: 24px; right: 24px;'}
+        background: ${bgColor};
+        color: white;
+        padding: ${isMobile ? '12px 16px' : '14px 20px'};
+        border-radius: ${isMobile ? '12px' : '16px'};
+        z-index: 10000;
+        animation: toastSlideIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        font-size: ${isMobile ? '13px' : '14px'};
+        max-width: ${isMobile ? 'none' : '380px'};
+        width: ${isMobile ? 'auto' : 'auto'};
+        border-left: 4px solid ${borderColor};
+        display: flex;
+        align-items: center;
+        gap: ${isMobile ? '10px' : '12px'};
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    `;
+    
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; width: ${isMobile ? '28px' : '32px'}; height: ${isMobile ? '28px' : '32px'}; background: rgba(255,255,255,0.2); border-radius: 50%; font-size: ${isMobile ? '14px' : '18px'}; font-weight: bold; flex-shrink: 0;">
+            ${icon}
+        </div>
+        <div style="flex: 1; line-height: 1.4; word-break: break-word;">
+            ${message}
+        </div>
+        <button class="toast-close" style="background: none; border: none; color: white; cursor: pointer; font-size: ${isMobile ? '20px' : '18px'}; padding: ${isMobile ? '8px' : '4px'}; opacity: 0.7; flex-shrink: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center;">&times;</button>
+    `;
+    
+    if (!isMobile) {
+        toast.onmouseenter = () => { toast.style.transform = 'translateX(-6px)'; };
+        toast.onmouseleave = () => { toast.style.transform = 'translateX(0)'; };
+    }
+    
+    const closeBtn = toast.querySelector('.toast-close');
+    if (closeBtn) {
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        };
+    }
+    
+    toast.onclick = (e) => {
+        if (e.target !== closeBtn) {
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        }
+    };
+    
+    document.body.appendChild(toast);
+    activeToasts.push(toast);
+    
+    let duration = isMobile ? 3500 : 3000;
+    if (type === 'delete') duration = isMobile ? 4500 : 4000;
+    if (type === 'error') duration = isMobile ? 4500 : 4000;
+    
+    const timeoutId = setTimeout(() => {
+        if (toast && toast.parentNode) {
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        }
+    }, duration);
+    
+    toast.dataset.timeoutId = timeoutId;
+}
+
+// Add CSS animations for toast
+if (!document.querySelector('#toast-animations')) {
+    const toastStyle = document.createElement('style');
+    toastStyle.id = 'toast-animations';
+    toastStyle.textContent = `
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInModal {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUpModal {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    `;
+    document.head.appendChild(toastStyle);
 }
 
 // ============================================================
@@ -409,28 +533,6 @@ window.clearAllNotifications = function() {
     updateNotificationBadge();
     showToastMessage('All notifications cleared', 'success');
 };
-
-function showToastMessage(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast-notification ${type}`;
-    toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background: ${type === 'urgent' ? '#DC2626' : (type === 'error' ? '#DC2626' : '#10B981')};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 12px;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        font-weight: 500;
-        max-width: 350px;
-    `;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
 
 // ============ DARK MODE ==========
 function initDarkMode() {
@@ -822,7 +924,7 @@ function renderIncidents() {
                 <td style="color:var(--text);">${inc.is_anonymous === true ? 'Anonymous' : escape(inc.reporter)}</td>
                 <td style="color:var(--text);">${inc.is_anonymous === true ? 'Hidden' : inc.student_id}</td>
                 <td style="color:var(--muted);">${getTimeAgo(inc.timestamp)}</td>
-                <td><div class="action-btns"><button class="action-btn" onclick="window.openModal('${inc.id}')">👁️</button></div></td>
+                <td><div class="action-btns"><button class="action-btn" onclick="window.openModal('${inc.id}')">👁️</button><button class="action-btn del" onclick="window.deleteIncident('${inc.id}')">🗑️</button></div></td>
             </tr>
         `;
     }).join('');
@@ -846,179 +948,59 @@ function renderMobileCards() {
                     <div class="m-card-field"><div class="m-field-label">📌 STATUS</div><div class="m-field-value"><span class="badge b-${inc.status === 'in-progress' ? 'inprogress' : inc.status}">${inc.status}</span></div></div>
                     <div class="m-card-field"><div class="m-field-label">👤 REPORTER</div><div class="m-field-value">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</div></div>
                 </div>
-                <div class="m-card-footer"><div class="m-timestamp">${getTimeAgo(inc.timestamp)}</div><div class="m-card-actions"><button class="action-btn" onclick="window.openModal('${inc.id}')" title="View Details">👁️</button></div></div>
+                <div class="m-card-footer"><div class="m-timestamp">${getTimeAgo(inc.timestamp)}</div><div class="m-card-actions"><button class="action-btn" onclick="window.openModal('${inc.id}')" title="View Details">👁️</button><button class="action-btn del" onclick="window.deleteIncident('${inc.id}')" title="Delete">🗑️</button></div></div>
             </div>
         `;
     }).join('');
 }
 
-// ============ UPDATED MODAL FUNCTIONS - SMALLER FOR MOBILE ==========
+// ============ MODAL FUNCTIONS ==========
 window.openModal = function(id) {
     const inc = allIncidents.find(i => String(i.id) === String(id));
     if (!inc) { showToastMessage('Incident not found', 'error'); return; }
     currentIncidentId = id;
     
-    // Check if modal exists, remove if it does
     const existingModal = document.getElementById('incidentModal');
     if (existingModal) existingModal.remove();
     
     const isMobile = window.innerWidth <= 768;
-    
-    // Create modal element
     const modal = document.createElement('div');
     modal.id = 'incidentModal';
     modal.className = 'modal-overlay';
     
-    // Get category display
     const categoryLabels = { security: 'Security', maintenance: 'Maintenance', janitorial: 'Janitorial', facilities: 'Facilities' };
     const priorityLabels = { high: 'High', medium: 'Medium', low: 'Low' };
-    const statusMap = { pending: 'Pending', 'in-progress': 'In Progress', resolved: 'Resolved' };
     
-    // Image section
     let imageHtml = '';
     if (inc.image_url && inc.image_url !== 'null' && inc.image_url !== '') {
-        imageHtml = `
-            <div class="modal-image-section" style="text-align:center;margin-bottom:12px;">
-                <img src="${escape(inc.image_url)}" alt="Incident Image" style="max-width:100%;max-height:${isMobile ? '120px' : '180px'};border-radius:12px;object-fit:cover;cursor:pointer;" onclick="window.openImageZoom('${escape(inc.image_url)}')">
-            </div>
-        `;
+        imageHtml = `<div class="modal-image-section" style="text-align:center;margin-bottom:12px;"><img src="${escape(inc.image_url)}" alt="Incident Image" style="max-width:100%;max-height:${isMobile ? '120px' : '180px'};border-radius:12px;object-fit:cover;cursor:pointer;" onclick="window.openImageZoom('${escape(inc.image_url)}')"></div>`;
     } else {
-        imageHtml = `
-            <div class="modal-image-section no-image" style="text-align:center;padding:${isMobile ? '16px' : '24px'};background:var(--bg);border-radius:12px;margin-bottom:12px;">
-                <svg width="${isMobile ? '32' : '40'}" height="${isMobile ? '32' : '40'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                <p style="margin-top:8px;font-size:${isMobile ? '11px' : '12px'};color:var(--muted);">No image attached</p>
-            </div>
-        `;
+        imageHtml = `<div class="modal-image-section no-image" style="text-align:center;padding:${isMobile ? '16px' : '24px'};background:var(--bg);border-radius:12px;margin-bottom:12px;"><svg width="${isMobile ? '32' : '40'}" height="${isMobile ? '32' : '40'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p style="margin-top:8px;font-size:${isMobile ? '11px' : '12px'};color:var(--muted);">No image attached</p></div>`;
     }
     
     modal.innerHTML = `
-        <div class="modal-container" style="
-            background: var(--surface);
-            border-radius: ${isMobile ? '16px' : '20px'};
-            width: 90%;
-            max-width: ${isMobile ? '400px' : '500px'};
-            max-height: ${isMobile ? '75vh' : '85vh'};
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            box-shadow: 0 25px 50px var(--shadow-lg);
-            animation: modalSlideIn 0.3s ease;
-        ">
-            <div class="modal-header" style="
-                padding: ${isMobile ? '12px 16px' : '16px 20px'};
-                background: linear-gradient(135deg, var(--teal), var(--teal-dark));
-                color: white;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                position: sticky;
-                top: 0;
-                z-index: 10;
-                flex-shrink: 0;
-            ">
-                <h3 style="font-size: ${isMobile ? '15px' : '18px'}; font-weight: 700; margin: 0;">
-                    📋 Incident Details
-                </h3>
-                <button class="modal-close" onclick="closeModal()" style="
-                    background: none;
-                    border: none;
-                    font-size: ${isMobile ? '22px' : '24px'};
-                    cursor: pointer;
-                    color: white;
-                    opacity: 0.8;
-                    transition: opacity 0.2s;
-                    line-height: 1;
-                ">&times;</button>
+        <div class="modal-container" style="background: var(--surface); border-radius: ${isMobile ? '16px' : '20px'}; width: 90%; max-width: ${isMobile ? '400px' : '500px'}; max-height: ${isMobile ? '75vh' : '85vh'}; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px var(--shadow-lg); animation: modalSlideIn 0.3s ease;">
+            <div class="modal-header" style="padding: ${isMobile ? '12px 16px' : '16px 20px'}; background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: white; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; flex-shrink: 0;">
+                <h3 style="font-size: ${isMobile ? '15px' : '18px'}; font-weight: 700; margin: 0;">📋 Incident Details</h3>
+                <button class="modal-close" onclick="closeModal()" style="background: none; border: none; font-size: ${isMobile ? '22px' : '24px'}; cursor: pointer; color: white; opacity: 0.8; transition: opacity 0.2s; line-height: 1;">&times;</button>
             </div>
-            
-            <div class="modal-body" style="
-                padding: ${isMobile ? '12px 14px' : '16px 20px'};
-                overflow-y: auto;
-                flex: 1;
-            ">
+            <div class="modal-body" style="padding: ${isMobile ? '12px 14px' : '16px 20px'}; overflow-y: auto; flex: 1;">
                 ${imageHtml}
-                
                 <div class="modal-info-section" style="display: flex; flex-direction: column; gap: ${isMobile ? '8px' : '12px'};">
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Title:</span>
-                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500; word-break: break-word;">${escape(inc.name)}</span>
-                    </div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Location:</span>
-                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500; word-break: break-word;">📍 ${escape(inc.location)}</span>
-                    </div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Category:</span>
-                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.category}" style="padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'}; font-weight: 600;">${categoryLabels[inc.category] || inc.category}</span></span>
-                    </div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Priority:</span>
-                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.priority}" style="padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'}; font-weight: 600;">${priorityLabels[inc.priority] || inc.priority}</span></span>
-                    </div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Status:</span>
-                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">
-                            <select id="modalStatus" class="modal-status-select" style="padding: ${isMobile ? '4px 10px' : '6px 12px'}; border: 1px solid var(--border); border-radius: 25px; font-family: inherit; font-size: ${isMobile ? '10px' : '12px'}; background: var(--surface); cursor: pointer; min-width: ${isMobile ? '100px' : '130px'}; color: var(--text);">
-                                <option value="pending" ${inc.status === 'pending' ? 'selected' : ''}>⏱️ Pending</option>
-                                <option value="in-progress" ${inc.status === 'in-progress' ? 'selected' : ''}>⚙️ In Progress</option>
-                                <option value="resolved" ${inc.status === 'resolved' ? 'selected' : ''}>✓ Resolved</option>
-                            </select>
-                        </span>
-                    </div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Reporter:</span>
-                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</span>
-                    </div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Student ID:</span>
-                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${inc.is_anonymous === true ? 'Hidden' : inc.student_id}</span>
-                    </div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Date:</span>
-                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">🕐 ${new Date(inc.timestamp).toLocaleString()}</span>
-                    </div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'};">
-                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Description:</span>
-                        <span class="info-value description-text" style="flex: 1; color: var(--text); font-size: ${isMobile ? '10px' : '12px'}; font-weight: 500; background: var(--bg); padding: ${isMobile ? '8px 10px' : '10px 12px'}; border-radius: 10px; line-height: 1.4;">${escape(inc.description || 'No description provided')}</span>
-                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Title:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${escape(inc.name)}</span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Location:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">📍 ${escape(inc.location)}</span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Category:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.category}" style="padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'};">${categoryLabels[inc.category] || inc.category}</span></span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Priority:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.priority}" style="padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'};">${priorityLabels[inc.priority] || inc.priority}</span></span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Status:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><select id="modalStatus" class="modal-status-select" style="padding: ${isMobile ? '4px 10px' : '6px 12px'}; border: 1px solid var(--border); border-radius: 25px; font-family: inherit; font-size: ${isMobile ? '10px' : '12px'}; background: var(--surface); cursor: pointer; min-width: ${isMobile ? '100px' : '130px'}; color: var(--text);"><option value="pending" ${inc.status === 'pending' ? 'selected' : ''}>⏱️ Pending</option><option value="in-progress" ${inc.status === 'in-progress' ? 'selected' : ''}>⚙️ In Progress</option><option value="resolved" ${inc.status === 'resolved' ? 'selected' : ''}>✓ Resolved</option></select></span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Reporter:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Student ID:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${inc.is_anonymous === true ? 'Hidden' : inc.student_id}</span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Date:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">🕐 ${new Date(inc.timestamp).toLocaleString()}</span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'};"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Description:</span><span class="info-value description-text" style="flex: 1; color: var(--text); font-size: ${isMobile ? '10px' : '12px'}; font-weight: 500; background: var(--bg); padding: ${isMobile ? '8px 10px' : '10px 12px'}; border-radius: 10px; line-height: 1.4;">${escape(inc.description || 'No description provided')}</span></div>
                 </div>
             </div>
-            
-            <div class="modal-footer" style="
-                padding: ${isMobile ? '10px 14px' : '12px 20px'};
-                border-top: 1px solid var(--border);
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-                background: var(--surface);
-                position: sticky;
-                bottom: 0;
-                flex-shrink: 0;
-            ">
-                <button class="btn-cancel" onclick="closeModal()" style="
-                    padding: ${isMobile ? '6px 16px' : '8px 20px'};
-                    background: var(--bg);
-                    border: 1px solid var(--border);
-                    border-radius: 30px;
-                    cursor: pointer;
-                    font-family: inherit;
-                    font-size: ${isMobile ? '11px' : '12px'};
-                    font-weight: 500;
-                    transition: background 0.2s;
-                    color: var(--text);
-                ">Cancel</button>
-                <button class="btn-save" onclick="saveStatus()" style="
-                    padding: ${isMobile ? '6px 16px' : '8px 20px'};
-                    background: var(--teal);
-                    color: white;
-                    border: none;
-                    border-radius: 30px;
-                    cursor: pointer;
-                    font-family: inherit;
-                    font-size: ${isMobile ? '11px' : '12px'};
-                    font-weight: 600;
-                    transition: all 0.2s;
-                ">Save Changes</button>
+            <div class="modal-footer" style="padding: ${isMobile ? '10px 14px' : '12px 20px'}; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: var(--surface); position: sticky; bottom: 0; flex-shrink: 0;">
+                <button class="btn-cancel" onclick="closeModal()" style="padding: ${isMobile ? '6px 16px' : '8px 20px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 30px; cursor: pointer; font-family: inherit; font-size: ${isMobile ? '11px' : '12px'}; font-weight: 500; transition: background 0.2s; color: var(--text);">Cancel</button>
+                <button class="btn-save" onclick="saveStatus()" style="padding: ${isMobile ? '6px 16px' : '8px 20px'}; background: var(--teal); color: white; border: none; border-radius: 30px; cursor: pointer; font-family: inherit; font-size: ${isMobile ? '11px' : '12px'}; font-weight: 600; transition: all 0.2s;">Save Changes</button>
             </div>
         </div>
     `;
@@ -1027,7 +1009,6 @@ window.openModal = function(id) {
     document.body.style.overflow = 'hidden';
     setTimeout(() => modal.classList.add('active'), 10);
     
-    // Add escape key listener
     const escHandler = (e) => { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', escHandler); } };
     document.addEventListener('keydown', escHandler);
 };
@@ -1074,6 +1055,83 @@ window.saveStatus = async function() {
     closeModal();
 };
 
+// ========== IMPROVED DELETE INCIDENT WITH CONFIRMATION MODAL ==========
+window.deleteIncident = async function(id) {
+    const incident = allIncidents.find(i => String(i.id) === String(id));
+    if (!incident) return;
+    
+    const isMobile = window.innerWidth <= 768;
+    
+    const confirmModal = document.createElement('div');
+    confirmModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(8px);
+        z-index: 20000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeInModal 0.2s ease;
+        padding: ${isMobile ? '16px' : '0'};
+    `;
+    
+    confirmModal.innerHTML = `
+        <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+            <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(220, 38, 38, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'};">
+                <svg width="${isMobile ? '28' : '32'}" height="${isMobile ? '28' : '32'}" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+            </div>
+            <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Delete Incident?</h3>
+            <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">"<strong style="color: var(--text);">${escape(incident.name)}</strong>" will be permanently deleted. This action cannot be undone.</p>
+            <div style="display: flex; gap: 12px; flex-direction: ${isMobile ? 'column' : 'row'};">
+                <button id="confirmCancelBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: var(--text); cursor: pointer; min-height: 48px;">Cancel</button>
+                <button id="confirmDeleteBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: #DC2626; border: none; border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: white; cursor: pointer; min-height: 48px;">Delete</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(confirmModal);
+    document.body.style.overflow = 'hidden';
+    
+    const cleanup = () => {
+        confirmModal.remove();
+        document.body.style.overflow = '';
+    };
+    
+    document.getElementById('confirmCancelBtn').onclick = () => {
+        cleanup();
+        showToastMessage('Deletion cancelled', 'info');
+    };
+    
+    document.getElementById('confirmDeleteBtn').onclick = async () => {
+        cleanup();
+        showToastMessage('Deleting incident...', 'info');
+        
+        try {
+            const { error } = await supabase.from('incident').delete().eq('id', id);
+            if (error) throw error;
+            
+            allIncidents = allIncidents.filter(i => String(i.id) !== String(id));
+            saveToLocalStorage();
+            updateAll();
+            if (currentIncidentId == id) window.closeModal();
+            showToastMessage('✓ Incident permanently deleted.', 'delete');
+            addInternalNotification('Incident Deleted', `"${incident.name}" was permanently deleted`, false);
+        } catch (error) {
+            console.error('Delete error:', error);
+            showToastMessage('❌ Delete failed: ' + (error.message || 'Unknown error'), 'error');
+            await loadIncidentsFromSupabase();
+        }
+    };
+};
+
 window.openImageZoom = function(src) {
     const overlay = document.createElement('div');
     overlay.style.cssText = `
@@ -1090,15 +1148,12 @@ window.openImageZoom = function(src) {
         cursor: zoom-out;
         padding: 20px;
     `;
-    overlay.innerHTML = `
-        <img src="${src}" style="max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain;">
-        <button style="position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
-    `;
+    overlay.innerHTML = `<img src="${src}" style="max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain;"><button style="position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>`;
     overlay.onclick = () => overlay.remove();
     document.body.appendChild(overlay);
 };
 
-// ============ REST OF THE FUNCTIONS (getIcon, getCategoryColor, getTimeAgo, escape, setupEvents, init, etc.) ============
+// ============ HELPER FUNCTIONS ==========
 function getIcon(cat) { return { security: '⚠️', maintenance: '🔧', janitorial: '🧹', facilities: '🏢' }[cat] || '📋'; }
 function getCategoryColor(cat) { return { security: '#DC2626', maintenance: '#2563EB', janitorial: '#1D9E75', facilities: '#D97706' }[cat] || '#6B7280'; }
 function getTimeAgo(date) { const h = Math.floor((Date.now() - new Date(date)) / 3600000); if (h < 1) return 'Just now'; if (h < 24) return `${h}h ago`; return `${Math.floor(h / 24)}d ago`; }
@@ -1112,6 +1167,7 @@ function setupEvents() {
     if (overlay) overlay.onclick = () => { drawer?.classList.remove('open'); overlay.classList.remove('open'); };
     if (adminPill) adminPill.onclick = () => { drawer?.classList.toggle('open'); overlay?.classList.toggle('open'); };
     if (notificationBell) notificationBell.onclick = (e) => { e.stopPropagation(); toggleNotificationDropdown(); };
+    
     document.querySelectorAll('.filter-chip').forEach(btn => {
         btn.onclick = () => {
             document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
@@ -1121,6 +1177,7 @@ function setupEvents() {
             renderMobileCards();
         };
     });
+    
     document.querySelectorAll('.drawer-item').forEach(item => {
         item.onclick = () => {
             const page = item.dataset.page;
@@ -1133,17 +1190,78 @@ function setupEvents() {
             overlay?.classList.remove('open');
         };
     });
+    
+    // ========== IMPROVED LOGOUT WITH CONFIRMATION MODAL ==========
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.onclick = () => {
-            if (confirm('Are you sure you want to logout?')) {
-                localStorage.removeItem('currentStudent');
-                localStorage.removeItem('currentAdmin');
-                localStorage.removeItem('isAdminLoggedIn');
-                window.location.href = '/land.html';
-            }
-        };
+        const newLogoutBtn = logoutBtn.cloneNode(true);
+        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        newLogoutBtn.addEventListener('click', () => {
+            const isMobile = window.innerWidth <= 768;
+            
+            const confirmModal = document.createElement('div');
+            confirmModal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.7);
+                backdrop-filter: blur(8px);
+                z-index: 20000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: fadeInModal 0.2s ease;
+                padding: ${isMobile ? '16px' : '0'};
+            `;
+            
+            confirmModal.innerHTML = `
+                <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+                    <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(245, 158, 11, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'};">
+                        <svg width="${isMobile ? '28' : '32'}" height="${isMobile ? '28' : '32'}" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Logout?</h3>
+                    <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">Are you sure you want to logout? You will need to login again to access your account.</p>
+                    <div style="display: flex; gap: 12px; flex-direction: ${isMobile ? 'column' : 'row'};">
+                        <button id="logoutCancelBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: var(--text); cursor: pointer; min-height: 48px;">Cancel</button>
+                        <button id="logoutConfirmBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: #DC2626; border: none; border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: white; cursor: pointer; min-height: 48px;">Logout</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(confirmModal);
+            document.body.style.overflow = 'hidden';
+            
+            const cleanup = () => {
+                confirmModal.remove();
+                document.body.style.overflow = '';
+            };
+            
+            document.getElementById('logoutCancelBtn').onclick = () => {
+                cleanup();
+                showToastMessage('Logout cancelled', 'info');
+            };
+            
+            document.getElementById('logoutConfirmBtn').onclick = () => {
+                cleanup();
+                showToastMessage('Logging out...', 'info');
+                
+                setTimeout(() => {
+                    localStorage.removeItem('currentStudent');
+                    localStorage.removeItem('currentAdmin');
+                    localStorage.removeItem('isAdminLoggedIn');
+                    showToastMessage('✓ Logged out successfully', 'success');
+                    setTimeout(() => { window.location.href = '/land.html'; }, 500);
+                }, 500);
+            };
+        });
     }
+    
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isNotificationDropdownOpen) { document.getElementById('notificationDropdown')?.classList.remove('show'); isNotificationDropdownOpen = false; } });
     document.addEventListener('click', (e) => { if (window.innerWidth <= 768 && drawer && !drawer.contains(e.target)) { drawer.classList.remove('open'); overlay?.classList.remove('open'); } });
 }
@@ -1205,7 +1323,6 @@ async function init() {
     setupRealtimeSubscription();
 
     setTimeout(() => { updateAll(); }, 500);
-
     setTimeout(() => { requestNotificationPermission(); }, 2000);
 
     window.addEventListener('storage', (e) => {

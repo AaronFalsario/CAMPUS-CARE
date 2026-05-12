@@ -172,7 +172,7 @@ window.clearAllNotifications = function() {
     saveNotifications();
     updateNotificationDropdown();
     updateNotificationBadge();
-    showMessage('All notifications cleared', 'success');
+    showToastMessage('All notifications cleared', 'success');
 };
 
 function getTimeAgo(dateString) {
@@ -189,35 +189,163 @@ function escapeHtml(str) {
     return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
-function showMessage(message, type = 'success') {
-    const existing = document.querySelector('.settings-toast');
-    if (existing) existing.remove();
+// ========== IMPROVED TOAST MESSAGE ==========
+function showToastMessage(message, type = 'success') {
+    const existing = document.querySelectorAll('.settings-toast');
+    existing.forEach(toast => toast.remove());
     
     const toast = document.createElement('div');
+    const isMobile = window.innerWidth <= 768;
+    
+    let icon = '';
+    let bgColor = '';
+    let borderColor = '';
+    
+    switch (type) {
+        case 'success': icon = '✓'; bgColor = '#10B981'; borderColor = '#059669'; break;
+        case 'error': icon = '✗'; bgColor = '#DC2626'; borderColor = '#991B1B'; break;
+        case 'warning': icon = '⚠️'; bgColor = '#F59E0B'; borderColor = '#D97706'; break;
+        case 'info': icon = 'ℹ️'; bgColor = '#3B82F6'; borderColor = '#2563EB'; break;
+        default: icon = '✓'; bgColor = '#10B981'; borderColor = '#059669';
+    }
+    
     toast.className = 'settings-toast';
-    toast.textContent = message;
     toast.style.cssText = `
         position: fixed;
-        bottom: 20px;
-        right: 20px;
-        padding: 12px 20px;
-        border-radius: 40px;
-        font-size: 13px;
+        ${isMobile ? 'bottom: 70px; left: 16px; right: 16px;' : 'bottom: 24px; right: 24px;'}
+        background: ${bgColor};
+        color: white;
+        padding: ${isMobile ? '12px 16px' : '12px 20px'};
+        border-radius: ${isMobile ? '12px' : '40px'};
+        font-size: ${isMobile ? '13px' : '14px'};
         font-weight: 500;
         z-index: 10000;
-        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-        color: white;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         animation: slideInRight 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-left: 4px solid ${borderColor};
+        max-width: ${isMobile ? 'none' : '380px'};
+        width: ${isMobile ? 'auto' : 'auto'};
     `;
+    
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; width: ${isMobile ? '28px' : '32px'}; height: ${isMobile ? '28px' : '32px'}; background: rgba(255,255,255,0.2); border-radius: 50%; font-size: ${isMobile ? '14px' : '16px'};">
+            ${icon}
+        </div>
+        <div style="flex: 1;">${message}</div>
+        <button class="toast-close" style="background: none; border: none; color: white; cursor: pointer; font-size: ${isMobile ? '20px' : '18px'}; padding: ${isMobile ? '8px' : '4px'}; opacity: 0.7; min-width: 44px; min-height: 44px;">&times;</button>
+    `;
+    
     document.body.appendChild(toast);
+    
+    const closeBtn = toast.querySelector('.toast-close');
+    if (closeBtn) {
+        closeBtn.onclick = () => toast.remove();
+    }
+    
     setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
+        if (toast && toast.parentNode) toast.remove();
     }, 3000);
 }
 
-// ============ DARK MODE SYSTEM ==========
+// ========== IMPROVED LOGOUT FUNCTION WITH CONFIRMATION MODAL ==========
+function confirmLogout() {
+    const isMobile = window.innerWidth <= 768;
+    
+    // Create custom confirmation modal
+    const confirmModal = document.createElement('div');
+    confirmModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(8px);
+        z-index: 20000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeInModal 0.2s ease;
+        padding: ${isMobile ? '16px' : '0'};
+    `;
+    
+    confirmModal.innerHTML = `
+        <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+            <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(245, 158, 11, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'};">
+                <svg width="${isMobile ? '28' : '32'}" height="${isMobile ? '28' : '32'}" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+            </div>
+            <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Logout?</h3>
+            <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">Are you sure you want to logout? You will need to login again to access your account.</p>
+            <div style="display: flex; gap: 12px; flex-direction: ${isMobile ? 'column' : 'row'};">
+                <button id="logoutCancelBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: var(--text); cursor: pointer; min-height: 48px;">Cancel</button>
+                <button id="logoutConfirmBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: #DC2626; border: none; border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: white; cursor: pointer; min-height: 48px;">Logout</button>
+            </div>
+        </div>
+    `;
+    
+    // Add animations if not present
+    if (!document.querySelector('#modal-animations')) {
+        const style = document.createElement('style');
+        style.id = 'modal-animations';
+        style.textContent = `
+            @keyframes fadeInModal {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUpModal {
+                from { opacity: 0; transform: translateY(30px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(confirmModal);
+    document.body.style.overflow = 'hidden';
+    
+    const cleanup = () => {
+        confirmModal.remove();
+        document.body.style.overflow = '';
+    };
+    
+    document.getElementById('logoutCancelBtn').onclick = () => {
+        cleanup();
+        showToastMessage('Logout cancelled', 'info');
+    };
+    
+    document.getElementById('logoutConfirmBtn').onclick = () => {
+        cleanup();
+        showToastMessage('Logging out...', 'info');
+        
+        setTimeout(() => {
+            localStorage.removeItem('currentStudent');
+            localStorage.removeItem('currentAdmin');
+            localStorage.removeItem('isAdminLoggedIn');
+            localStorage.removeItem('admin_notifications');
+            localStorage.removeItem('campus_care_admin_settings');
+            localStorage.removeItem('admin_dark_mode');
+            
+            showToastMessage('✓ Logged out successfully', 'success');
+            
+            setTimeout(() => {
+                window.location.href = '/land.html';
+            }, 800);
+        }, 500);
+    };
+}
+
+// ========== DARK MODE SYSTEM ==========
 function initDarkMode() {
     const savedMode = localStorage.getItem('admin_dark_mode');
     const toggle = document.getElementById('darkModeToggle');
@@ -325,7 +453,7 @@ function initDarkMode() {
     });
 }
 
-// ============ SETTINGS MANAGER ============
+// ========== SETTINGS MANAGER ==========
 class PersistentSettings {
     constructor() {
         this.settings = this.loadSettings();
@@ -531,7 +659,7 @@ class PersistentSettings {
             this.saveSettings();
             this.updateAllUI();
             this.applySettingsToPage();
-            showMessage('Settings reset to default!', 'success');
+            showToastMessage('Settings reset to default!', 'success');
             addInternalNotification('Settings Reset', 'All settings have been reset to default', false);
         }
     }
@@ -545,7 +673,7 @@ class PersistentSettings {
         a.download = `campus_care_settings_${new Date().toISOString().slice(0, 19)}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        showMessage('Settings exported!', 'success');
+        showToastMessage('Settings exported!', 'success');
         addInternalNotification('Settings Exported', 'Your settings have been exported', false);
     }
 
@@ -558,10 +686,10 @@ class PersistentSettings {
                 this.saveSettings();
                 this.updateAllUI();
                 this.applySettingsToPage();
-                showMessage('Settings imported successfully!', 'success');
+                showToastMessage('Settings imported successfully!', 'success');
                 addInternalNotification('Settings Imported', 'Your settings have been imported', false);
             } catch (err) {
-                showMessage('Invalid settings file', 'error');
+                showToastMessage('Invalid settings file', 'error');
             }
         };
         reader.readAsText(file);
@@ -570,7 +698,7 @@ class PersistentSettings {
 
 window.persistentSettings = new PersistentSettings();
 
-// ============ LOAD ADMIN DATA ============
+// ========== LOAD ADMIN DATA ==========
 async function loadAdminData() {
     try {
         const stored = localStorage.getItem('currentAdmin');
@@ -638,11 +766,11 @@ async function loadAdminData() {
     }
 }
 
-// ============ SAVE PROFILE (DESKTOP) ============
+// ========== SAVE PROFILE (DESKTOP) ==========
 async function saveProfile() {
     const newName = document.getElementById('adminFullName').value.trim();
     if (!newName) {
-        showMessage('Please enter a name', 'error');
+        showToastMessage('Please enter a name', 'error');
         return;
     }
     
@@ -668,18 +796,18 @@ async function saveProfile() {
         if (drawerInitials) drawerInitials.textContent = initials;
         if (mobileAdminName) mobileAdminName.textContent = newName;
         
-        showMessage('Profile updated!', 'success');
+        showToastMessage('Profile updated!', 'success');
         addInternalNotification('Profile Updated', 'Your profile information has been updated', false);
     } catch (err) {
-        showMessage('Error: ' + err.message, 'error');
+        showToastMessage('Error: ' + err.message, 'error');
     }
 }
 
-// ============ SAVE PROFILE (MOBILE) ============
+// ========== SAVE PROFILE (MOBILE) ==========
 async function saveMobileProfile() {
     const newName = document.getElementById('mobileFullName').value.trim();
     if (!newName) {
-        showMessage('Please enter a name', 'error');
+        showToastMessage('Please enter a name', 'error');
         return;
     }
     
@@ -705,30 +833,30 @@ async function saveMobileProfile() {
         if (drawerInitials) drawerInitials.textContent = initials;
         if (mobileAdminName) mobileAdminName.textContent = newName;
         
-        showMessage('Profile updated!', 'success');
+        showToastMessage('Profile updated!', 'success');
         addInternalNotification('Profile Updated', 'Your profile information has been updated', false);
         closeProfileModal();
     } catch (err) {
-        showMessage('Error: ' + err.message, 'error');
+        showToastMessage('Error: ' + err.message, 'error');
     }
 }
 
-// ============ CHANGE PASSWORD ============
+// ========== CHANGE PASSWORD ==========
 async function changePassword() {
     const currentPwd = document.getElementById('currentPassword')?.value;
     const newPwd = document.getElementById('newPassword')?.value;
     const confirmPwd = document.getElementById('confirmPassword')?.value;
     
     if (!currentPwd || !newPwd || !confirmPwd) {
-        showMessage('Please fill all fields', 'error');
+        showToastMessage('Please fill all fields', 'error');
         return;
     }
     if (newPwd.length < 6) {
-        showMessage('Password must be 6+ characters', 'error');
+        showToastMessage('Password must be 6+ characters', 'error');
         return;
     }
     if (newPwd !== confirmPwd) {
-        showMessage('Passwords do not match', 'error');
+        showToastMessage('Passwords do not match', 'error');
         return;
     }
     
@@ -738,7 +866,7 @@ async function changePassword() {
             password: currentPwd
         });
         if (signInError) {
-            showMessage('Current password is incorrect', 'error');
+            showToastMessage('Current password is incorrect', 'error');
             return;
         }
         
@@ -753,14 +881,14 @@ async function changePassword() {
         if (newPwdInput) newPwdInput.value = '';
         if (confirmPwdInput) confirmPwdInput.value = '';
         
-        showMessage('Password changed successfully!', 'success');
+        showToastMessage('Password changed successfully!', 'success');
         addInternalNotification('Password Changed', 'Your password has been updated', false);
     } catch (err) {
-        showMessage('Error: ' + err.message, 'error');
+        showToastMessage('Error: ' + err.message, 'error');
     }
 }
 
-// ============ SAVE ALL PREFERENCES ============
+// ========== SAVE ALL PREFERENCES ==========
 function saveAllPreferences() {
     const defaultView = document.getElementById('defaultView')?.value || 'overview';
     const darkMode = document.getElementById('darkMode')?.checked || false;
@@ -777,11 +905,11 @@ function saveAllPreferences() {
         lastUpdated: new Date().toISOString()
     });
     
-    showMessage('All preferences saved!', 'success');
+    showToastMessage('All preferences saved!', 'success');
     addInternalNotification('Preferences Saved', 'Your preferences have been saved', false);
 }
 
-// ============ SAVE NOTIFICATION SETTINGS ============
+// ========== SAVE NOTIFICATION SETTINGS ==========
 function saveNotificationSettings() {
     const emailNotifications = document.getElementById('emailNotifications')?.checked || false;
     const pushNotifications = document.getElementById('pushNotifications')?.checked || false;
@@ -801,11 +929,11 @@ function saveNotificationSettings() {
         mobileNotificationStatus.textContent = pushNotifications ? 'Allowed' : 'Disabled';
     }
     
-    showMessage('Notification settings saved!', 'success');
+    showToastMessage('Notification settings saved!', 'success');
     addInternalNotification('Notification Settings', 'Your notification preferences have been updated', false);
 }
 
-// ============ SAVE DATA SETTINGS ============
+// ========== SAVE DATA SETTINGS ==========
 function saveDataSettings() {
     const autoDeleteResolved = document.getElementById('autoDeleteResolved')?.checked || true;
     const resolvedRetentionHours = parseInt(document.getElementById('resolvedRetentionHours')?.value || 24);
@@ -815,11 +943,11 @@ function saveDataSettings() {
         resolvedRetentionHours: resolvedRetentionHours
     });
     
-    showMessage('Data settings saved!', 'success');
+    showToastMessage('Data settings saved!', 'success');
     addInternalNotification('Data Settings Saved', 'Your data management settings have been updated', false);
 }
 
-// ============ LOAD STATS ============
+// ========== LOAD STATS ==========
 async function loadStats() {
     try {
         const { count: incidentsCount } = await supabase.from('incident').select('*', { count: 'exact', head: true });
@@ -849,12 +977,12 @@ async function loadStats() {
     }
 }
 
-// ============ EXPORT DATA ============
+// ========== EXPORT DATA ==========
 async function exportIncidents() {
     try {
         const { data } = await supabase.from('incident').select('*');
         if (!data || data.length === 0) {
-            showMessage('No incidents to export', 'error');
+            showToastMessage('No incidents to export', 'error');
             return;
         }
         let csv = 'ID,Title,Location,Category,Priority,Status,Student Name,Student ID,Date\n';
@@ -867,10 +995,10 @@ async function exportIncidents() {
         link.download = `incidents_${Date.now()}.csv`;
         link.click();
         URL.revokeObjectURL(link.href);
-        showMessage(`Exported ${data.length} incidents`, 'success');
+        showToastMessage(`Exported ${data.length} incidents`, 'success');
         addInternalNotification('Data Exported', `Exported ${data.length} incidents to CSV`, false);
     } catch (err) {
-        showMessage('Error exporting incidents', 'error');
+        showToastMessage('Error exporting incidents', 'error');
     }
 }
 
@@ -878,7 +1006,7 @@ async function exportStudents() {
     try {
         const { data } = await supabase.from('student').select('*');
         if (!data || data.length === 0) {
-            showMessage('No students to export', 'error');
+            showToastMessage('No students to export', 'error');
             return;
         }
         let csv = 'ID,Full Name,Student ID,Email,Status,Created At\n';
@@ -891,28 +1019,28 @@ async function exportStudents() {
         link.download = `students_${Date.now()}.csv`;
         link.click();
         URL.revokeObjectURL(link.href);
-        showMessage(`Exported ${data.length} students`, 'success');
+        showToastMessage(`Exported ${data.length} students`, 'success');
         addInternalNotification('Data Exported', `Exported ${data.length} students to CSV`, false);
     } catch (err) {
-        showMessage('Error exporting students', 'error');
+        showToastMessage('Error exporting students', 'error');
     }
 }
 
-// ============ CLEAR INCIDENTS ============
+// ========== CLEAR INCIDENTS ==========
 async function clearIncidents() {
     try {
         const { error } = await supabase.from('incident').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         if (error) throw error;
         localStorage.setItem('campus_care_reports', '[]');
-        showMessage('All incidents cleared successfully!', 'success');
+        showToastMessage('All incidents cleared successfully!', 'success');
         addInternalNotification('Data Cleared', 'All incidents have been cleared from the system', false);
         await loadStats();
     } catch (err) {
-        showMessage('Error clearing incidents: ' + err.message, 'error');
+        showToastMessage('Error clearing incidents: ' + err.message, 'error');
     }
 }
 
-// ============ MODAL ==========
+// ========== MODAL ==========
 let pendingClear = null;
 
 function showConfirmModal(message, callback) {
@@ -963,8 +1091,14 @@ function closeModal() {
     pendingClear = null;
 }
 
-// ============ TABS ============
+// ========== TABS (Modified: Security Tab Removed from Sidebar) ==========
 function setupTabs() {
+    // Remove the Security tab from the sidebar
+    const securityTab = document.querySelector('.settings-sidebar-item[data-tab="security"]');
+    if (securityTab) {
+        securityTab.remove();
+    }
+    
     const tabs = document.querySelectorAll('.settings-sidebar-item');
     const contents = document.querySelectorAll('.tab-content');
     tabs.forEach(tab => {
@@ -978,7 +1112,7 @@ function setupTabs() {
     });
 }
 
-// ============ MOBILE MODAL FUNCTIONS ============
+// ========== MOBILE MODAL FUNCTIONS ==========
 function openProfileModal() {
     const modal = document.getElementById('profileModal');
     if (modal) modal.classList.add('active');
@@ -1013,7 +1147,7 @@ function selectLanguage(lang) {
     const selectedLanguage = document.getElementById('selectedLanguage');
     if (selectedLanguage) selectedLanguage.textContent = lang;
     closeLanguageModal();
-    showMessage(`Language set to ${lang}`, 'success');
+    showToastMessage(`Language set to ${lang}`, 'success');
     addInternalNotification('Language Changed', `Language set to ${lang}`, false);
 }
 
@@ -1032,24 +1166,15 @@ function closeFeedbackModal() {
 function sendFeedback() {
     const feedback = document.getElementById('feedbackText')?.value.trim();
     if (!feedback) {
-        showMessage('Please enter your feedback', 'error');
+        showToastMessage('Please enter your feedback', 'error');
         return;
     }
-    showMessage('Thank you for your feedback!', 'success');
+    showToastMessage('Thank you for your feedback!', 'success');
     addInternalNotification('Feedback Received', 'Thanks for sharing your thoughts!', false);
     closeFeedbackModal();
 }
 
-function confirmLogout() {
-    if (confirm('Are you sure you want to logout?')) {
-        localStorage.removeItem('currentStudent');
-        localStorage.removeItem('currentAdmin');
-        localStorage.removeItem('isAdminLoggedIn');
-        window.location.href = '/land.html';
-    }
-}
-
-// ============ NAVIGATION ============
+// ========== NAVIGATION ==========
 function setupNavigation() {
     const drawer = document.getElementById('drawer');
     const overlay = document.getElementById('overlay');
@@ -1058,7 +1183,9 @@ function setupNavigation() {
     const notificationBell = document.getElementById('notificationBell');
     
     if (notificationBell) {
-        notificationBell.addEventListener('click', (e) => {
+        const newBell = notificationBell.cloneNode(true);
+        notificationBell.parentNode.replaceChild(newBell, notificationBell);
+        newBell.addEventListener('click', (e) => {
             e.stopPropagation();
             toggleNotificationDropdown();
         });
@@ -1069,8 +1196,10 @@ function setupNavigation() {
     if (overlay) overlay.onclick = () => { drawer.classList.remove('open'); overlay.classList.remove('open'); };
     
     document.querySelectorAll('.drawer-item').forEach(item => {
-        item.addEventListener('click', () => {
-            const page = item.dataset.page;
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        newItem.addEventListener('click', () => {
+            const page = newItem.dataset.page;
             if (page === 'dashboard') window.location.href = '/Assets/Admin_dashboard/Admin.html';
             else if (page === 'incidents') window.location.href = '/Assets/Admin_dashboard/incident/incident.html';
             else if (page === 'users') window.location.href = '/Assets/Admin_dashboard/user_page/user.html';
@@ -1081,9 +1210,15 @@ function setupNavigation() {
         });
     });
     
+    // IMPROVED LOGOUT BUTTON
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.onclick = confirmLogout;
+        const newLogoutBtn = logoutBtn.cloneNode(true);
+        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        newLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            confirmLogout();
+        });
     }
     
     document.addEventListener('click', (e) => {
@@ -1094,12 +1229,12 @@ function setupNavigation() {
     });
     
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isNotificationDropdownOpen) {
-            const dropdown = document.getElementById('notificationDropdown');
-            if (dropdown) dropdown.classList.remove('show');
-            isNotificationDropdownOpen = false;
-        }
         if (e.key === 'Escape') {
+            if (isNotificationDropdownOpen) {
+                const dropdown = document.getElementById('notificationDropdown');
+                if (dropdown) dropdown.classList.remove('show');
+                isNotificationDropdownOpen = false;
+            }
             closeProfileModal();
             closeNotificationsModal();
             closeLanguageModal();
@@ -1109,7 +1244,7 @@ function setupNavigation() {
     });
 }
 
-// ============ SETUP BUTTONS ============
+// ========== SETUP BUTTONS ==========
 function setupButtons() {
     const saveProfileBtn = document.getElementById('saveProfileBtn');
     const changePasswordBtn = document.getElementById('changePasswordBtn');
@@ -1154,12 +1289,14 @@ function setupButtons() {
     }
 }
 
-// ============ BOTTOM NAVIGATION ============
+// ========== BOTTOM NAVIGATION ==========
 function initBottomNav() {
     const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
     bottomNavItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const page = item.dataset.page;
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        newItem.addEventListener('click', () => {
+            const page = newItem.dataset.page;
             if (page === 'dashboard') {
                 window.location.href = '/Assets/Admin_dashboard/Admin.html';
             } else if (page === 'incidents') {
@@ -1175,7 +1312,7 @@ function initBottomNav() {
     });
 }
 
-// ============ INITIALIZE ============
+// ========== INITIALIZE ==========
 async function init() {
     console.log('Initializing Settings page...');
     loadNotifications();
@@ -1215,6 +1352,7 @@ async function init() {
     window.resetSettings = () => window.persistentSettings.resetToDefault();
     window.exportSettings = () => window.persistentSettings.exportSettings();
     window.importSettings = () => document.getElementById('importSettingsInput')?.click();
+    window.showToastMessage = showToastMessage;
 }
 
 init();

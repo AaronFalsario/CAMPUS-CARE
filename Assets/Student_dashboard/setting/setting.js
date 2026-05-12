@@ -858,29 +858,108 @@ function updateDarkModeIcons(isDark) {
     }
 }
 
+// ========== IMPROVED LOGOUT FUNCTION WITH CUSTOM MODAL ==========
+function showLogoutModal() {
+    const isMobile = window.innerWidth <= 768;
+    
+    const confirmModal = document.createElement('div');
+    confirmModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(8px);
+        z-index: 20000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeInModal 0.2s ease;
+        padding: ${isMobile ? '16px' : '0'};
+    `;
+    
+    confirmModal.innerHTML = `
+        <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+            <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(245, 158, 11, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'};">
+                <svg width="${isMobile ? '28' : '32'}" height="${isMobile ? '28' : '32'}" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+            </div>
+            <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Logout?</h3>
+            <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">Are you sure you want to logout? You will need to login again to access your account.</p>
+            <div style="display: flex; gap: 12px; flex-direction: ${isMobile ? 'column' : 'row'};">
+                <button id="logoutCancelBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: var(--text); cursor: pointer; min-height: 48px;">Cancel</button>
+                <button id="logoutConfirmBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: #DC2626; border: none; border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: white; cursor: pointer; min-height: 48px;">Logout</button>
+            </div>
+        </div>
+    `;
+    
+    // Add animations if not present
+    if (!document.querySelector('#student-modal-animations')) {
+        const style = document.createElement('style');
+        style.id = 'student-modal-animations';
+        style.textContent = `
+            @keyframes fadeInModal {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUpModal {
+                from { opacity: 0; transform: translateY(30px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(confirmModal);
+    document.body.style.overflow = 'hidden';
+    
+    const cleanup = () => {
+        confirmModal.remove();
+        document.body.style.overflow = '';
+    };
+    
+    const cancelBtn = document.getElementById('logoutCancelBtn');
+    const confirmBtn = document.getElementById('logoutConfirmBtn');
+    
+    if (cancelBtn) {
+        cancelBtn.onclick = () => {
+            cleanup();
+            showToast('Logout cancelled', 'info');
+        };
+    }
+    
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            cleanup();
+            showToast('Logging out...', 'info');
+            
+            setTimeout(() => {
+                localStorage.removeItem('currentStudent');
+                localStorage.removeItem('student_language');
+                localStorage.removeItem('darkMode');
+                localStorage.removeItem('student_notification_prefs');
+                localStorage.removeItem('student_notifications');
+                localStorage.removeItem('student_feedback');
+                showToast(t('logout_success'), 'success');
+                setTimeout(() => {
+                    window.location.href = '/land.html';
+                }, 800);
+            }, 500);
+        };
+    }
+}
+
 // ========== NAVIGATION ==========
 function goBack() {
-    window.location.href = '/Assets/Student_dashboard/SDB.html' + Date.now();
-}
-
-function confirmLogoutDesktop() {
-    if (confirm(t('confirm_logout'))) {
-        localStorage.removeItem('currentStudent');
-        localStorage.removeItem('currentAdmin');
-        localStorage.removeItem('isAdminLoggedIn');
-        showToast(t('logout_success'), 'success');
-        setTimeout(() => window.location.href = '/land.html', 1000);
-    }
-}
-
-function confirmLogoutMobile() {
-    if (confirm(t('confirm_logout'))) {
-        localStorage.removeItem('currentStudent');
-        localStorage.removeItem('currentAdmin');
-        localStorage.removeItem('isAdminLoggedIn');
-        showToast(t('logout_success'), 'success');
-        setTimeout(() => window.location.href = '/land.html', 1000);
-    }
+    window.location.href = '/Assets/Student_dashboard/SDB.html';
 }
 
 function setupNavigation() {
@@ -890,8 +969,29 @@ function setupNavigation() {
     const reportNav = document.getElementById('reportNav');
     if (reportNav) reportNav.addEventListener('click', () => window.location.href = '/Assets/Student_reporting/report.html');
     
+    // Desktop logout button in drawer
     const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) logoutBtn.addEventListener('click', confirmLogoutDesktop);
+    if (logoutBtn) {
+        const newLogoutBtn = logoutBtn.cloneNode(true);
+        logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
+        newLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showLogoutModal();
+        });
+    }
+    
+    // Mobile logout button in settings list
+    const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+    if (mobileLogoutBtn) {
+        const newMobileLogoutBtn = mobileLogoutBtn.cloneNode(true);
+        mobileLogoutBtn.parentNode.replaceChild(newMobileLogoutBtn, mobileLogoutBtn);
+        newMobileLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showLogoutModal();
+        });
+    }
     
     const saveProfileBtnDesktop = document.getElementById('saveProfileBtnDesktop');
     if (saveProfileBtnDesktop) {
@@ -907,8 +1007,10 @@ function setupNavigation() {
 function setupBottomNav() {
     const items = document.querySelectorAll('.bottom-nav-item');
     items.forEach(item => {
-        item.addEventListener('click', (e) => {
-            const page = item.dataset.page;
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        newItem.addEventListener('click', (e) => {
+            const page = newItem.dataset.page;
             if (page === 'dashboard') {
                 window.location.href = '/Assets/Student_dashboard/SDB.html';
             } else if (page === 'report') {
@@ -1034,33 +1136,42 @@ window.openFeedbackModalMobile = openFeedbackModalMobile;
 window.closeFeedbackModalMobile = closeFeedbackModalMobile;
 window.sendFeedbackMobile = sendFeedbackMobile;
 window.rateUsMobile = rateUsMobile;
-window.confirmLogoutMobile = confirmLogoutMobile;
-window.confirmLogoutDesktop = confirmLogoutDesktop;
 window.goBack = goBack;
+window.showLogoutModal = showLogoutModal;
 
 // ========== TOAST ==========
 function showToast(message, type = 'success') {
+    const existingToasts = document.querySelectorAll('.toast-notification');
+    existingToasts.forEach(toast => toast.remove());
+    
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
-    toast.textContent = message;
+    const isMobile = window.innerWidth <= 768;
+    
+    let bgColor = '#10B981';
+    if (type === 'error') bgColor = '#DC2626';
+    else if (type === 'warning') bgColor = '#F59E0B';
+    else if (type === 'info') bgColor = '#3B82F6';
+    
     toast.style.cssText = `
         position: fixed;
-        bottom: 80px;
-        right: 20px;
-        background: ${type === 'error' ? '#DC2626' : type === 'warning' ? '#F59E0B' : '#10B981'};
+        ${isMobile ? 'bottom: 70px; left: 16px; right: 16px;' : 'bottom: 80px; right: 20px;'}
+        background: ${bgColor};
         color: white;
-        padding: 12px 20px;
-        border-radius: 40px;
-        font-size: 13px;
+        padding: ${isMobile ? '10px 16px' : '12px 20px'};
+        border-radius: ${isMobile ? '12px' : '40px'};
+        font-size: ${isMobile ? '12px' : '13px'};
         font-weight: 500;
         z-index: 10000;
-        animation: slideInToast 0.3s ease;
+        animation: slideInRight 0.3s ease;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        text-align: ${isMobile ? 'center' : 'left'};
+        max-width: ${isMobile ? 'none' : '350px'};
     `;
+    toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => {
-        toast.style.animation = 'slideOutToast 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
+        if (toast && toast.parentNode) toast.remove();
     }, 3000);
 }
 
@@ -1093,7 +1204,9 @@ function setupNotificationBell() {
     const bell = document.getElementById('notificationBtnDesktop');
     const panel = document.getElementById('notificationPanelDesktop');
     if (bell && panel) {
-        bell.addEventListener('click', (e) => {
+        const newBell = bell.cloneNode(true);
+        bell.parentNode.replaceChild(newBell, bell);
+        newBell.addEventListener('click', (e) => {
             e.stopPropagation();
             panel.classList.toggle('active');
             renderNotificationsDesktop();
@@ -1106,7 +1219,9 @@ function setupNotificationBell() {
     });
     const clearBtn = document.getElementById('clearNotificationsBtnDesktop');
     if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
+        const newClearBtn = clearBtn.cloneNode(true);
+        clearBtn.parentNode.replaceChild(newClearBtn, clearBtn);
+        newClearBtn.addEventListener('click', () => {
             if (confirm(t('clear_all') || 'Clear all notifications?')) {
                 notifications = [];
                 localStorage.setItem('student_notifications', JSON.stringify(notifications));
@@ -1180,17 +1295,37 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const sendFeedbackBtn = document.getElementById('sendFeedbackBtnDesktop');
     if (sendFeedbackBtn) {
-        sendFeedbackBtn.addEventListener('click', sendFeedbackDesktop);
+        const newSendBtn = sendFeedbackBtn.cloneNode(true);
+        sendFeedbackBtn.parentNode.replaceChild(newSendBtn, sendFeedbackBtn);
+        newSendBtn.addEventListener('click', sendFeedbackDesktop);
     }
     
     const englishBtn = document.getElementById('englishLangBtn');
     const tagalogBtn = document.getElementById('tagalogLangBtn');
     if (englishBtn) {
-        englishBtn.addEventListener('click', () => selectLanguageDesktop('English'));
+        const newEnglishBtn = englishBtn.cloneNode(true);
+        englishBtn.parentNode.replaceChild(newEnglishBtn, englishBtn);
+        newEnglishBtn.addEventListener('click', () => selectLanguageDesktop('English'));
     }
     if (tagalogBtn) {
-        tagalogBtn.addEventListener('click', () => selectLanguageDesktop('Filipino'));
+        const newTagalogBtn = tagalogBtn.cloneNode(true);
+        tagalogBtn.parentNode.replaceChild(newTagalogBtn, tagalogBtn);
+        newTagalogBtn.addEventListener('click', () => selectLanguageDesktop('Filipino'));
     }
     
     displayFeedbackHistoryDesktop();
 });
+
+// ========== LEGACY LOGOUT FUNCTIONS FOR MOBILE ONCLICK ==========
+function confirmLogoutMobile() {
+    showLogoutModal();
+}
+
+function confirmLogoutDesktop() {
+    showLogoutModal();
+}
+
+// Make sure showLogoutModal is also exposed
+window.showLogoutModal = showLogoutModal;
+window.confirmLogoutMobile = confirmLogoutMobile;
+window.confirmLogoutDesktop = confirmLogoutDesktop;

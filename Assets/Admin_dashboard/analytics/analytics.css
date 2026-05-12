@@ -926,6 +926,7 @@ body.dark-mode .b-resolved { color: var(--green); }
     }
 }
 
+/* ========== EXTRA SMALL DEVICES (max-width: 480px) ========== */
 @media (max-width: 480px) {
     .brand-subtitle {
         display: none;
@@ -1089,4 +1090,138 @@ body.dark-mode td,
 body.dark-mode th,
 body.dark-mode .table-container {
     color: var(--text) !important;
+}
+
+@media (max-width: 768px) {
+
+    .filter-bar {
+        display: none !important;
+    }
+    
+    .search-bar {
+        display: none !important;
+    }
+
+    .filter-chip {
+        display: none !important;
+    }
+    
+    .table-container {
+        display: none !important;
+    }
+
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td {
+        display: none !important;
+    }
+
+    .pagination {
+        display: none !important;
+    }
+}
+
+/* ========== AGGRESSIVE DARK MODE - ALL TEXT WHITE ========== */
+body.dark-mode,
+body.dark-mode div,
+body.dark-mode span,
+body.dark-mode p,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6,
+body.dark-mode a,
+body.dark-mode li,
+body.dark-mode td,
+body.dark-mode th,
+body.dark-mode label,
+body.dark-mode .text,
+body.dark-mode .title,
+body.dark-mode .subtitle,
+body.dark-mode .stat-number,
+body.dark-mode .stat-label,
+body.dark-mode .info-label,
+body.dark-mode .info-value,
+body.dark-mode .m-card-title,
+body.dark-mode .m-field-value,
+body.dark-mode .m-field-label,
+body.dark-mode .brand-name,
+body.dark-mode .brand-subtitle,
+body.dark-mode .page-title,
+body.dark-mode .page-sub,
+body.dark-mode .filter-label,
+body.dark-mode .drawer-name,
+body.dark-mode .drawer-role,
+body.dark-mode .drawer-item span,
+body.dark-mode .drawer-logout span,
+body.dark-mode .bottom-nav-item span,
+body.dark-mode .notification-dropdown-title,
+body.dark-mode .notification-dropdown-message,
+body.dark-mode .notification-dropdown-time,
+body.dark-mode .modal-header h3,
+body.dark-mode .modal-value,
+body.dark-mode .modal-label,
+body.dark-mode .description-text,
+body.dark-mode .btn-cancel,
+body.dark-mode .btn-save {
+    color: #FFFFFF !important;
+}
+
+/* Inputs and selects */
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea,
+body.dark-mode .filter-input,
+body.dark-mode .filter-select,
+body.dark-mode .search-input,
+body.dark-mode .modal-status-select {
+    color: #FFFFFF !important;
+    background-color: #1E293B !important;
+}
+
+/* Placeholders */
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder,
+body.dark-mode .search-input::placeholder {
+    color: #94A3B8 !important;
+}
+
+/* Icons and SVGs */
+body.dark-mode svg,
+body.dark-mode .drawer-item svg,
+body.dark-mode .bottom-nav-item svg,
+body.dark-mode .action-btn svg {
+    stroke: #FFFFFF !important;
+    fill: none !important;
+}
+
+/* Keep badge backgrounds but force white text */
+body.dark-mode .badge,
+body.dark-mode .modal-status-badge,
+body.dark-mode .modal-priority-badge,
+body.dark-mode .modal-category-badge {
+    color: #FFFFFF !important;
+}
+
+/* Buttons with colored backgrounds */
+body.dark-mode .dark-mode-toggle,
+body.dark-mode .notification-bell,
+body.dark-mode .export-btn,
+body.dark-mode .page-btn,
+body.dark-mode .filter-chip,
+body.dark-mode .view-btn {
+    color: #FFFFFF !important;
+}
+
+/* Keep brand gradient visible */
+body.dark-mode .brand-name {
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
 }

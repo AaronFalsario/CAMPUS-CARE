@@ -14,7 +14,6 @@
     --danger-light: #FEE2E2;
     --success: #10B981;
     --drawer-bg: #FFFFFF;
-    /* ✅ FIXED: drawer is now smaller and more compact */
     --sidebar-width: 240px;
     --bottom-nav-height: 65px;
     --card-gap: 28px;
@@ -63,7 +62,6 @@ body.dark-mode .drawer {
     border-right: 1px solid rgba(59, 130, 246, 0.2);
 }
 
-/* Compact header with less padding */
 .drawer-header {
     padding: 20px 16px 18px 16px;
     text-align: center;
@@ -281,6 +279,7 @@ body.dark-mode .drawer-footer {
     background: linear-gradient(0deg, #0F172A 0%, #1E293B 100%);
 }
 
+/* ========== FIXED LOGOUT BUTTON - NO RED BACKGROUND ========== */
 .drawer-logout {
     display: flex;
     align-items: center;
@@ -289,8 +288,8 @@ body.dark-mode .drawer-footer {
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    background: rgba(220, 38, 38, 0.08);
-    border: 1px solid rgba(220, 38, 38, 0.2);
+    background: transparent;
+    border: none;
     border-radius: 12px;
     width: 100%;
     padding: 8px 12px;
@@ -305,9 +304,8 @@ body.dark-mode .drawer-footer {
 }
 
 .drawer-logout:hover {
-    background: rgba(220, 38, 38, 0.15);
+    background: rgba(220, 38, 38, 0.1);
     color: #DC2626;
-    border-color: rgba(220, 38, 38, 0.4);
     transform: translateX(3px);
 }
 
@@ -318,8 +316,8 @@ body.dark-mode .drawer-footer {
 
 body.dark-mode .drawer-logout {
     color: #FCA5A5;
-    background: rgba(220, 38, 38, 0.12);
-    border: 1px solid rgba(220, 38, 38, 0.3);
+    background: transparent;
+    border: none;
 }
 
 body.dark-mode .drawer-logout svg {
@@ -327,9 +325,8 @@ body.dark-mode .drawer-logout svg {
 }
 
 body.dark-mode .drawer-logout:hover {
-    background: rgba(220, 38, 38, 0.25);
+    background: rgba(220, 38, 38, 0.15);
     color: #FCA5A5;
-    border-color: rgba(220, 38, 38, 0.5);
 }
 
 /* Scrollbar for drawer */
@@ -359,7 +356,7 @@ body.dark-mode .drawer-nav::-webkit-scrollbar-thumb {
     background: rgba(59, 130, 246, 0.4);
 }
 
-/* ========== TOPBAR (adjusted for new sidebar width) ========== */
+/* ========== TOPBAR ========== */
 .topbar {
     margin-left: var(--sidebar-width);
     padding: 12px 28px;
@@ -455,7 +452,7 @@ body.dark-mode .brand-name {
     transform: translateY(-2px);
 }
 
-/* ========== MAIN CONTENT (adjusted for new sidebar) ========== */
+/* ========== MAIN CONTENT ========== */
 .main-content {
     margin-left: var(--sidebar-width);
     padding: 28px 36px;
@@ -466,7 +463,7 @@ body.dark-mode .brand-name {
 .page-title { font-size: 26px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .page-sub { font-size: 13px; color: var(--muted); }
 
-/* Settings Cards - WITH GAPS */
+/* Settings Cards */
 .settings-card {
     background: var(--surface);
     border-radius: 22px;
@@ -796,7 +793,6 @@ body.dark-mode .alert.error { background: #7F1D1D; color: #FCA5A5; }
     padding-bottom: calc(var(--bottom-nav-height) + 16px);
 }
 
-/* Mobile Profile Card */
 .mobile-profile-card {
     background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
     border-radius: 22px;
@@ -857,7 +853,6 @@ body.dark-mode .alert.error { background: #7F1D1D; color: #FCA5A5; }
     display: inline-block;
 }
 
-/* Mobile Settings Section - WITH GAPS */
 .mobile-settings-section {
     background: var(--surface);
     border-radius: 18px;
@@ -943,7 +938,6 @@ body.dark-mode .alert.error { background: #7F1D1D; color: #FCA5A5; }
     color: var(--danger);
 }
 
-/* Mobile Toggle Switch */
 .mobile-toggle-switch {
     position: relative;
     display: inline-block;
@@ -989,7 +983,6 @@ input:checked + .mobile-toggle-slider:before {
     transform: translateX(22px);
 }
 
-/* Mobile Footer */
 .mobile-footer {
     text-align: center;
     padding: 20px 16px 32px;
@@ -1129,7 +1122,6 @@ input:checked + .mobile-toggle-slider:before {
     border-top: 1px solid var(--border);
 }
 
-/* Avatar Upload Modal specific */
 .avatar-preview-large {
     width: 100px;
     height: 100px;
@@ -1221,7 +1213,6 @@ input:checked + .mobile-toggle-slider:before {
     }
 }
 
-/* Small mobile devices */
 @media (max-width: 480px) {
     .mobile-profile-card {
         padding: 14px;
@@ -1309,4 +1300,58 @@ input:checked + .mobile-toggle-slider:before {
 .toast-notification.urgent {
     background: #DC2626 !important;
     animation: slideIn 0.3s ease, pulse 0.5s ease 3;
+}
+
+/* ========== DARK MODE - MAKE ALL TEXT WHITE ========== */
+body.dark-mode,
+body.dark-mode * {
+    color: #FFFFFF !important;
+}
+
+/* Keep brand gradient visible */
+body.dark-mode .brand-name {
+    background: linear-gradient(135deg, #60A5FA, #93C5FD);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+}
+
+/* Keep badge backgrounds but text white */
+body.dark-mode .badge,
+body.dark-mode .badge * {
+    color: #FFFFFF !important;
+}
+
+/* Input fields */
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea,
+body.dark-mode .filter-input,
+body.dark-mode .filter-select {
+    background: var(--surface) !important;
+    color: #FFFFFF !important;
+}
+
+/* Placeholder text */
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder {
+    color: #94A3B8 !important;
+}
+
+/* SVGs */
+body.dark-mode svg {
+    stroke: #FFFFFF !important;
+}
+
+/* Buttons */
+body.dark-mode button,
+body.dark-mode .btn-save,
+body.dark-mode .btn-cancel {
+    color: #FFFFFF !important;
+}
+
+/* Modal */
+body.dark-mode .modal-container,
+body.dark-mode .modal-container * {
+    color: #FFFFFF !important;
 }

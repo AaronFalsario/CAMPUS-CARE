@@ -272,10 +272,8 @@ function showNotificationToast(notification) {
     const icon = isFireAlert ? '🔥🚨' : (notification.type === 'report_resolved' ? '✅' : '📢');
     const toast = document.createElement('div');
     
-    // Check if mobile viewport
     const isMobile = window.innerWidth <= 768;
     
-    // Position calculation - ABOVE bottom nav on mobile
     let bottomPosition = isMobile ? 'calc(65px + 16px)' : '80px';
     let rightPosition = isMobile ? '16px' : '20px';
     let leftPosition = isMobile ? '16px' : 'auto';
@@ -551,7 +549,6 @@ function addModalStyles() {
         }
         .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
         
-        /* MODAL - BALANCED SIZE FOR MOBILE (NOT TOO BIG, NOT TOO SMALL) */
         .modal-container {
             background: var(--surface); border-radius: 20px;
             width: 88%; max-width: 340px; max-height: 70vh;
@@ -560,32 +557,16 @@ function addModalStyles() {
             border: 1px solid var(--border);
         }
         
-        /* Desktop slightly larger */
         @media (min-width: 769px) {
-            .modal-container {
-                max-width: 420px;
-                max-height: 80vh;
-                border-radius: 24px;
-            }
+            .modal-container { max-width: 420px; max-height: 80vh; border-radius: 24px; }
         }
         
-        /* Mobile - BALANCED SIZE */
         @media (max-width: 768px) {
-            .modal-container {
-                max-width: 320px;
-                width: 88%;
-                max-height: 68vh;
-                border-radius: 18px;
-            }
+            .modal-container { max-width: 320px; width: 88%; max-height: 68vh; border-radius: 18px; }
         }
         
         @media (max-width: 480px) {
-            .modal-container {
-                max-width: 300px;
-                width: 90%;
-                max-height: 65vh;
-                border-radius: 16px;
-            }
+            .modal-container { max-width: 300px; width: 90%; max-height: 65vh; border-radius: 16px; }
         }
         
         @keyframes slideUp { 
@@ -640,54 +621,36 @@ function addModalStyles() {
             .modal-image-section img { max-height: 120px; }
         }
         
-        .modal-no-image {
-            padding: 16px; text-align: center; color: var(--muted); font-size: 11px;
-        }
-        
+        .modal-no-image { padding: 16px; text-align: center; color: var(--muted); font-size: 11px; }
         .modal-section { margin: 12px 0; }
-        
         .modal-section-title {
             font-size: 9px; font-weight: 600; text-transform: uppercase;
             letter-spacing: 0.6px; color: var(--muted); margin-bottom: 8px;
         }
-        
         .modal-row {
             display: flex; gap: 10px; padding: 8px 0;
             border-bottom: 1px solid var(--border);
         }
-        
         .modal-row:last-child { border-bottom: none; }
-        
         .modal-label {
             font-size: 10px; color: var(--muted); min-width: 70px;
             font-weight: 600; padding-top: 2px;
         }
-        
-        @media (max-width: 768px) {
-            .modal-label { font-size: 9px; min-width: 65px; }
-        }
-        
+        @media (max-width: 768px) { .modal-label { font-size: 9px; min-width: 65px; } }
         .modal-value { font-size: 11px; color: var(--text); flex: 1; line-height: 1.4; word-break: break-word; }
-        
-        @media (max-width: 768px) {
-            .modal-value { font-size: 10px; }
-        }
+        @media (max-width: 768px) { .modal-value { font-size: 10px; } }
         
         .modal-description-box {
             background: var(--bg); border-radius: 10px; padding: 10px 14px;
             font-size: 11px; color: var(--text); line-height: 1.5;
             border: 1px solid var(--border); white-space: pre-wrap;
         }
-        
-        @media (max-width: 768px) {
-            .modal-description-box { padding: 8px 12px; font-size: 10px; }
-        }
+        @media (max-width: 768px) { .modal-description-box { padding: 8px 12px; font-size: 10px; } }
         
         .modal-restricted-box {
             background: #FEF2F2; border-left: 3px solid #DC2626;
             border-radius: 10px; padding: 10px 14px;
         }
-        
         @media (max-width: 768px) {
             .modal-restricted-box { padding: 8px 12px; }
             .modal-restricted-box strong { font-size: 10px; }
@@ -700,21 +663,14 @@ function addModalStyles() {
             position: sticky; bottom: 0; background: var(--surface);
             border-radius: 0 0 18px 18px;
         }
-        
-        @media (max-width: 768px) {
-            .modal-footer { padding: 10px 16px; }
-        }
+        @media (max-width: 768px) { .modal-footer { padding: 10px 16px; } }
         
         .modal-btn-close {
             padding: 7px 20px; border-radius: 40px; border: 1px solid var(--border);
             background: transparent; color: var(--text); cursor: pointer;
             font-size: 11px; font-weight: 600; transition: all 0.2s;
         }
-        
-        @media (max-width: 768px) {
-            .modal-btn-close { padding: 5px 16px; font-size: 10px; }
-        }
-        
+        @media (max-width: 768px) { .modal-btn-close { padding: 5px 16px; font-size: 10px; } }
         .modal-btn-close:hover { background: var(--border); }
         
         .modal-report-id {
@@ -722,12 +678,8 @@ function addModalStyles() {
             background: var(--bg); border-radius: 14px; border: 1px solid var(--border);
             font-family: monospace;
         }
-        
-        @media (max-width: 768px) {
-            .modal-report-id { font-size: 8px; padding: 2px 6px; }
-        }
+        @media (max-width: 768px) { .modal-report-id { font-size: 8px; padding: 2px 6px; } }
 
-        /* Badge styles for modal */
         .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 500; }
         @media (max-width: 768px) { .badge { padding: 2px 8px; font-size: 9px; } }
         .badge.security  { background:#FEF2F2; color:#DC2626; }
@@ -744,7 +696,6 @@ function addModalStyles() {
         .badge.other   { background:#E2E8F0; color:#475569; }
         .badge.safety  { background:#FEF2F2; color:#DC2626; font-weight:500; }
 
-        /* Image zoom overlay */
         .img-zoom-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.9);
             z-index: 30000; display: flex; align-items: center;
@@ -927,8 +878,6 @@ function createIncidentCard(report) {
     const isSecurity = isSecuritySensitive(report);
     const safetyBadge = (!canSeeDetails && !isYourReport) ? `<span class="badge safety">🔒 ${t('restricted')}</span>` : '';
     const securityBadge = isSecurity && !isYourReport ? `<span class="badge security-alert">⚠️ SECURITY CONCERN</span>` : '';
-    
-    // REMOVED: image thumbnail from card - no image outside modal
 
     return `<div class="incident-card" onclick="viewIncident(${report.id})" style="cursor:pointer;">
         <div class="card-header" style="display:flex;gap:12px;align-items:flex-start;">
@@ -1028,7 +977,95 @@ function toggleViewMode() {
     loadAndDisplayReports();
 }
 
-// ========== VIEW INCIDENT MODAL (FULL DETAIL - NO AI CONFIDENCE) ==========
+// ========== IMPROVED LOGOUT FUNCTION FOR STUDENT DASHBOARD ==========
+function confirmStudentLogout() {
+    const isMobile = window.innerWidth <= 768;
+    
+    const confirmModal = document.createElement('div');
+    confirmModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(8px);
+        z-index: 20000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeInModal 0.2s ease;
+        padding: ${isMobile ? '16px' : '0'};
+    `;
+    
+    confirmModal.innerHTML = `
+        <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+            <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(245, 158, 11, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'};">
+                <svg width="${isMobile ? '28' : '32'}" height="${isMobile ? '28' : '32'}" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+            </div>
+            <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Logout?</h3>
+            <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">Are you sure you want to logout? You will need to login again to access your account.</p>
+            <div style="display: flex; gap: 12px; flex-direction: ${isMobile ? 'column' : 'row'};">
+                <button id="logoutCancelBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: var(--text); cursor: pointer; min-height: 48px;">Cancel</button>
+                <button id="logoutConfirmBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: #DC2626; border: none; border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: white; cursor: pointer; min-height: 48px;">Logout</button>
+            </div>
+        </div>
+    `;
+    
+    // Add animations if not present
+    if (!document.querySelector('#student-modal-animations')) {
+        const style = document.createElement('style');
+        style.id = 'student-modal-animations';
+        style.textContent = `
+            @keyframes fadeInModal {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUpModal {
+                from { opacity: 0; transform: translateY(30px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(confirmModal);
+    document.body.style.overflow = 'hidden';
+    
+    const cleanup = () => {
+        confirmModal.remove();
+        document.body.style.overflow = '';
+    };
+    
+    document.getElementById('logoutCancelBtn').onclick = () => {
+        cleanup();
+        showNotification('Logout cancelled', 'info');
+    };
+    
+    document.getElementById('logoutConfirmBtn').onclick = () => {
+        cleanup();
+        showNotification('Logging out...', 'info');
+        
+        setTimeout(() => {
+            localStorage.removeItem('currentStudent');
+            localStorage.removeItem('student_language');
+            showNotification('✓ Logged out successfully', 'success');
+            setTimeout(() => {
+                window.location.href = '/land.html';
+            }, 800);
+        }, 500);
+    };
+}
+
+// ========== VIEW INCIDENT MODAL ==========
 window.viewIncident = function(id) {
     const inc = allIncidents.find(i => String(i.id) === String(id));
     if (!inc) return;
@@ -1049,7 +1086,6 @@ window.viewIncident = function(id) {
     const statusMap = { pending: { cls: 'pending', label: t('pending') }, 'in-progress': { cls: 'progress', label: t('in progress') }, resolved: { cls: 'resolved', label: t('resolved') } };
     const stat = statusMap[inc.status] || statusMap.pending;
 
-    // Image section - only inside modal
     let imageSection = '';
     if (inc.image_url) {
         imageSection = `
@@ -1065,7 +1101,6 @@ window.viewIncident = function(id) {
         imageSection = `<div class="modal-image-section"><div class="modal-no-image">📷 ${t('no image')}</div></div>`;
     }
 
-    // Description section
     let descriptionSection = '';
     if (isYourReport || canSeeDetails) {
         descriptionSection = `<div class="modal-description-box">${escapeHtml(safeDescription)}</div>`;
@@ -1077,7 +1112,6 @@ window.viewIncident = function(id) {
             </div>`;
     }
 
-    // Reporter display
     let reporterDisplay = '';
     if (!canSeeDetails && !isYourReport) {
         reporterDisplay = `<span class="badge safety">🔒 ${t('confidential')}</span>`;
@@ -1087,9 +1121,6 @@ window.viewIncident = function(id) {
         reporterDisplay = `<span class="badge other">👤 ${isYourReport ? t('you') : escapeHtml(safeReporterName)}</span>`;
     }
 
-    // REMOVED: AI confidence badge - completely removed from modal
-
-    // Resolved date
     const resolvedRow = inc.resolved_at
         ? `<div class="modal-row"><div class="modal-label">✅ Resolved</div><div class="modal-value">${new Date(inc.resolved_at).toLocaleString()}</div></div>`
         : '';
@@ -1277,13 +1308,14 @@ function initializeDrawer() {
     if (hamburger) hamburger.addEventListener('click', window.openDrawer);
     if (overlay) overlay.addEventListener('click', window.closeDrawer);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.closeDrawer(); });
+    
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         const newLogoutBtn = logoutBtn.cloneNode(true);
         logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
         newLogoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            if (confirm(t('confirm logout'))) { localStorage.removeItem('currentStudent'); showNotification(t('logged out')); setTimeout(() => window.location.href = '/land.html', 1000); }
+            confirmStudentLogout();
         });
     }
 }

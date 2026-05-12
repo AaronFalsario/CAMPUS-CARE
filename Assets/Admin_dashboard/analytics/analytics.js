@@ -13,8 +13,123 @@ let rowsPerPage = 10;
 let searchTerm = '';
 let trendChart, categoryChart, priorityChart, statusChart;
 let realtimeSubscription = null;
+let activeToasts = [];
 
-// ========== LOAD INCIDENTS FROM SUPABASE (NOT LOCALSTORAGE) ==========
+// ========== IMPROVED TOAST NOTIFICATION ==========
+function showToast(message, type = 'success') {
+    // Remove existing toasts
+    activeToasts.forEach(toast => {
+        if (toast && toast.parentNode) {
+            if (toast.dataset.timeoutId) clearTimeout(parseInt(toast.dataset.timeoutId));
+            toast.remove();
+        }
+    });
+    activeToasts = [];
+    
+    const toast = document.createElement('div');
+    const isMobile = window.innerWidth <= 768;
+    
+    let icon = '';
+    let bgColor = '';
+    let borderColor = '';
+    
+    switch (type) {
+        case 'success': icon = '✓'; bgColor = '#10B981'; borderColor = '#059669'; break;
+        case 'error': icon = '✗'; bgColor = '#DC2626'; borderColor = '#991B1B'; break;
+        case 'warning': icon = '⚠️'; bgColor = '#F59E0B'; borderColor = '#D97706'; break;
+        case 'info': icon = 'ℹ️'; bgColor = '#3B82F6'; borderColor = '#2563EB'; break;
+        case 'delete': icon = '🗑️'; bgColor = '#EF4444'; borderColor = '#B91C1C'; break;
+        default: icon = '✓'; bgColor = '#10B981'; borderColor = '#059669';
+    }
+    
+    toast.style.cssText = `
+        position: fixed;
+        ${isMobile ? 'bottom: 70px; left: 16px; right: 16px;' : 'bottom: 24px; right: 24px;'}
+        background: ${bgColor};
+        color: white;
+        padding: ${isMobile ? '12px 16px' : '14px 20px'};
+        border-radius: ${isMobile ? '12px' : '16px'};
+        z-index: 10000;
+        animation: toastSlideIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        font-size: ${isMobile ? '13px' : '14px'};
+        max-width: ${isMobile ? 'none' : '380px'};
+        width: ${isMobile ? 'auto' : 'auto'};
+        border-left: 4px solid ${borderColor};
+        display: flex;
+        align-items: center;
+        gap: ${isMobile ? '10px' : '12px'};
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    `;
+    
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; width: ${isMobile ? '28px' : '32px'}; height: ${isMobile ? '28px' : '32px'}; background: rgba(255,255,255,0.2); border-radius: 50%; font-size: ${isMobile ? '14px' : '18px'}; font-weight: bold; flex-shrink: 0;">
+            ${icon}
+        </div>
+        <div style="flex: 1; line-height: 1.4; word-break: break-word;">
+            ${message}
+        </div>
+        <button class="toast-close" style="background: none; border: none; color: white; cursor: pointer; font-size: ${isMobile ? '20px' : '18px'}; padding: ${isMobile ? '8px' : '4px'}; opacity: 0.7; flex-shrink: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center;">&times;</button>
+    `;
+    
+    if (!isMobile) {
+        toast.onmouseenter = () => { toast.style.transform = 'translateX(-6px)'; };
+        toast.onmouseleave = () => { toast.style.transform = 'translateX(0)'; };
+    }
+    
+    const closeBtn = toast.querySelector('.toast-close');
+    if (closeBtn) {
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        };
+    }
+    
+    toast.onclick = (e) => {
+        if (e.target !== closeBtn) {
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        }
+    };
+    
+    document.body.appendChild(toast);
+    activeToasts.push(toast);
+    
+    let duration = isMobile ? 3500 : 3000;
+    if (type === 'delete') duration = isMobile ? 4500 : 4000;
+    if (type === 'error') duration = isMobile ? 4500 : 4000;
+    
+    const timeoutId = setTimeout(() => {
+        if (toast && toast.parentNode) {
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        }
+    }, duration);
+    
+    toast.dataset.timeoutId = timeoutId;
+}
+
+// Add CSS animations for toast
+if (!document.querySelector('#toast-animations')) {
+    const toastStyle = document.createElement('style');
+    toastStyle.id = 'toast-animations';
+    toastStyle.textContent = `
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    `;
+    document.head.appendChild(toastStyle);
+}
+
+// ========== LOAD INCIDENTS FROM SUPABASE ==========
 async function loadIncidents() {
     try {
         const { data, error } = await supabase
@@ -24,7 +139,6 @@ async function loadIncidents() {
         
         if (error) throw error;
         
-        // Convert Supabase data to match your existing format
         allIncidents = (data || []).map(inc => ({
             id: inc.id,
             title: inc.title,
@@ -53,12 +167,10 @@ async function loadIncidents() {
         
     } catch (error) {
         console.error('Error loading incidents from Supabase:', error);
-        // Fallback to localStorage if Supabase fails
         loadFromLocalStorage();
     }
 }
 
-// Fallback function
 function loadFromLocalStorage() {
     const stored = localStorage.getItem('campus_care_reports');
     if (stored && stored !== '[]') {
@@ -83,27 +195,24 @@ function setupRealtimeSubscription() {
         .channel('analytics-realtime-channel')
         .on('postgres_changes', 
             { 
-                event: '*',  // Listen to INSERT, UPDATE, DELETE
+                event: '*',
                 schema: 'public', 
                 table: 'incident' 
             }, 
             async (payload) => {
                 console.log('Analytics: Real-time change detected!', payload.eventType, payload.new?.id);
-                
-                // Reload all data from Supabase
                 await loadIncidents();
                 
-                // Show notification
                 if (payload.eventType === 'UPDATE') {
                     const oldStatus = payload.old?.status;
                     const newStatus = payload.new?.status;
                     if (oldStatus !== newStatus) {
-                        showToast(`🔄 Status updated: ${oldStatus} → ${newStatus}`);
+                        showToast(`🔄 Status updated: ${oldStatus} → ${newStatus}`, 'info');
                     }
                 } else if (payload.eventType === 'INSERT') {
-                    showToast(`📝 New incident reported: ${payload.new?.title}`);
+                    showToast(`📝 New incident reported: ${payload.new?.title}`, 'success');
                 } else if (payload.eventType === 'DELETE') {
-                    showToast(`🗑️ Incident deleted`);
+                    showToast(`🗑️ Incident deleted`, 'info');
                 }
             }
         )
@@ -111,7 +220,6 @@ function setupRealtimeSubscription() {
             console.log('Analytics realtime subscription status:', status);
         });
     
-    // Also listen for localStorage changes as backup (for cross-tab)
     window.addEventListener('storage', (event) => {
         if (event.key === 'campus_care_reports') {
             console.log('localStorage change detected, reloading...');
@@ -120,71 +228,61 @@ function setupRealtimeSubscription() {
     });
 }
 
-// ========== DARK MODE ==========
+// ========== DARK MODE - COMPLETELY FIXED ==========
 function initDarkMode() {
     const saved = localStorage.getItem('admin_dark_mode');
     const toggle = document.getElementById('darkModeToggle');
     
+    // Apply dark mode based on saved preference or system preference
     if (saved === 'enabled') {
         document.body.classList.add('dark-mode');
-        if (toggle) {
-            const sunIcon = toggle.querySelector('.sun-icon');
-            const moonIcon = toggle.querySelector('.moon-icon');
-            if (sunIcon) sunIcon.style.display = 'none';
-            if (moonIcon) moonIcon.style.display = 'block';
-        }
-        setTimeout(() => updateChartColorsForDarkMode(true), 100);
+        updateDarkModeUI(true, toggle);
+        updateChartColorsForDarkMode(true);
     } else if (saved === 'disabled') {
         document.body.classList.remove('dark-mode');
-        if (toggle) {
-            const sunIcon = toggle.querySelector('.sun-icon');
-            const moonIcon = toggle.querySelector('.moon-icon');
-            if (sunIcon) sunIcon.style.display = 'block';
-            if (moonIcon) moonIcon.style.display = 'none';
-        }
-        setTimeout(() => updateChartColorsForDarkMode(false), 100);
+        updateDarkModeUI(false, toggle);
+        updateChartColorsForDarkMode(false);
     } else {
+        // Check system preference
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         if (prefersDark) {
             document.body.classList.add('dark-mode');
-            if (toggle) {
-                const sunIcon = toggle.querySelector('.sun-icon');
-                const moonIcon = toggle.querySelector('.moon-icon');
-                if (sunIcon) sunIcon.style.display = 'none';
-                if (moonIcon) moonIcon.style.display = 'block';
-            }
+            updateDarkModeUI(true, toggle);
             localStorage.setItem('admin_dark_mode', 'enabled');
-            setTimeout(() => updateChartColorsForDarkMode(true), 100);
+            updateChartColorsForDarkMode(true);
+        } else {
+            updateDarkModeUI(false, toggle);
         }
     }
     
+    // Add click event to toggle button
     if (toggle) {
         const newToggle = toggle.cloneNode(true);
         toggle.parentNode.replaceChild(newToggle, toggle);
         
-        newToggle.addEventListener('click', () => {
+        newToggle.addEventListener('click', (e) => {
+            e.preventDefault();
             if (document.body.classList.contains('dark-mode')) {
+                // Switch to light mode
                 document.body.classList.remove('dark-mode');
                 localStorage.setItem('admin_dark_mode', 'disabled');
-                const sunIcon = newToggle.querySelector('.sun-icon');
-                const moonIcon = newToggle.querySelector('.moon-icon');
-                if (sunIcon) sunIcon.style.display = 'block';
-                if (moonIcon) moonIcon.style.display = 'none';
+                updateDarkModeUI(false, newToggle);
                 updateChartColorsForDarkMode(false);
-                setTimeout(() => updateCharts(), 100);
+                updateCharts();
+                showToast('Light mode activated', 'success');
             } else {
+                // Switch to dark mode
                 document.body.classList.add('dark-mode');
                 localStorage.setItem('admin_dark_mode', 'enabled');
-                const sunIcon = newToggle.querySelector('.sun-icon');
-                const moonIcon = newToggle.querySelector('.moon-icon');
-                if (sunIcon) sunIcon.style.display = 'none';
-                if (moonIcon) moonIcon.style.display = 'block';
+                updateDarkModeUI(true, newToggle);
                 updateChartColorsForDarkMode(true);
-                setTimeout(() => updateCharts(), 100);
+                updateCharts();
+                showToast('Dark mode activated', 'success');
             }
         });
     }
     
+    // Listen for storage changes (if dark mode changed in another tab)
     window.addEventListener('storage', (e) => {
         if (e.key === 'admin_dark_mode') {
             const isDark = e.newValue === 'enabled';
@@ -195,16 +293,38 @@ function initDarkMode() {
                 document.body.classList.remove('dark-mode');
                 updateChartColorsForDarkMode(false);
             }
-            setTimeout(() => updateCharts(), 100);
+            updateCharts();
         }
     });
 }
 
+// Helper function to update dark mode UI elements
+function updateDarkModeUI(isDark, toggleBtn) {
+    if (!toggleBtn) return;
+    
+    const sunIcon = toggleBtn.querySelector('.sun-icon');
+    const moonIcon = toggleBtn.querySelector('.moon-icon');
+    
+    if (sunIcon && moonIcon) {
+        if (isDark) {
+            // Dark mode active - show moon, hide sun
+            sunIcon.style.display = 'none';
+            moonIcon.style.display = 'block';
+        } else {
+            // Light mode active - show sun, hide moon
+            sunIcon.style.display = 'block';
+            moonIcon.style.display = 'none';
+        }
+    }
+}
+
+// Update chart colors for dark mode
 function updateChartColorsForDarkMode(isDark) {
     const textColor = isDark ? '#F1F5F9' : '#161513';
     const mutedColor = isDark ? '#94A3B8' : '#7A776F';
     const gridColor = isDark ? '#334155' : '#E4E1DB';
     
+    // Update trend chart
     if (trendChart) {
         if (trendChart.options.plugins?.legend?.labels) {
             trendChart.options.plugins.legend.labels.color = textColor;
@@ -224,11 +344,15 @@ function updateChartColorsForDarkMode(isDark) {
         trendChart.update();
     }
     
-    if (categoryChart && categoryChart.options.plugins?.legend?.labels) {
-        categoryChart.options.plugins.legend.labels.color = textColor;
+    // Update category chart (doughnut)
+    if (categoryChart) {
+        if (categoryChart.options.plugins?.legend?.labels) {
+            categoryChart.options.plugins.legend.labels.color = textColor;
+        }
         categoryChart.update();
     }
     
+    // Update priority chart (bar)
     if (priorityChart) {
         if (priorityChart.options.scales?.y?.ticks) {
             priorityChart.options.scales.y.ticks.color = mutedColor;
@@ -242,8 +366,11 @@ function updateChartColorsForDarkMode(isDark) {
         priorityChart.update();
     }
     
-    if (statusChart && statusChart.options.plugins?.legend?.labels) {
-        statusChart.options.plugins.legend.labels.color = textColor;
+    // Update status chart (pie)
+    if (statusChart) {
+        if (statusChart.options.plugins?.legend?.labels) {
+            statusChart.options.plugins.legend.labels.color = textColor;
+        }
         statusChart.update();
     }
 }
@@ -320,11 +447,13 @@ function updateCharts() {
     const mutedColor = isDark ? '#94A3B8' : '#7A776F';
     const gridColor = isDark ? '#334155' : '#E4E1DB';
     
+    // Destroy existing charts
     if (trendChart) trendChart.destroy();
     if (categoryChart) categoryChart.destroy();
     if (priorityChart) priorityChart.destroy();
     if (statusChart) statusChart.destroy();
     
+    // Create trend chart
     const ctxTrend = document.getElementById('trendChart');
     if (ctxTrend) {
         trendChart = new Chart(ctxTrend.getContext('2d'), {
@@ -374,6 +503,7 @@ function updateCharts() {
         });
     }
     
+    // Create category chart (doughnut)
     const ctxCategory = document.getElementById('categoryChart');
     if (ctxCategory) {
         categoryChart = new Chart(ctxCategory.getContext('2d'), {
@@ -405,6 +535,7 @@ function updateCharts() {
         });
     }
     
+    // Create priority chart (bar)
     const ctxPriority = document.getElementById('priorityChart');
     if (ctxPriority) {
         priorityChart = new Chart(ctxPriority.getContext('2d'), {
@@ -445,6 +576,7 @@ function updateCharts() {
         });
     }
     
+    // Create status chart (pie)
     const ctxStatus = document.getElementById('statusChart');
     if (ctxStatus) {
         statusChart = new Chart(ctxStatus.getContext('2d'), {
@@ -486,7 +618,7 @@ function renderTable() {
     const pageData = filteredIncidents.slice(start, end);
     
     if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No incidents found</td></tr>';
+        tbody.innerHTML = '</table><td colspan="8" style="text-align: center;">No incidents found</td></tr>';
         const pagination = document.getElementById('pagination');
         if (pagination) pagination.innerHTML = '';
         return;
@@ -543,9 +675,12 @@ function handleSearch() {
 
 function setFilter(filter) {
     currentFilter = filter;
-    document.querySelectorAll('.filter-chip').forEach(btn => {
-        if (btn.dataset.filter === filter) btn.classList.add('active');
-        else btn.classList.remove('active');
+    const statusSelect = document.getElementById('statusFilter');
+    if (statusSelect) {
+        statusSelect.value = filter;
+    }
+    document.querySelectorAll('.filter-chip, .filter-option').forEach(btn => {
+        btn.classList.remove('active');
     });
     applyFilters();
     renderTable();
@@ -609,7 +744,7 @@ function exportToCSV() {
     a.download = `campuscare_analytics_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('CSV exported successfully!');
+    showToast('CSV exported successfully!', 'success');
 }
 
 function getTimeAgo(date) {
@@ -626,14 +761,6 @@ function getTimeAgo(date) {
 function escapeHtml(text) {
     if (!text) return '';
     return text.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
-}
-
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
 }
 
 function loadAdminProfile() {
@@ -743,18 +870,91 @@ function setupNavigation() {
         });
     }
     
+    // IMPROVED LOGOUT BUTTON
     if (logoutBtn) {
         const newLogout = logoutBtn.cloneNode(true);
         logoutBtn.parentNode.replaceChild(newLogout, logoutBtn);
-        newLogout.addEventListener('click', () => {
-            if (confirm('Are you sure you want to logout?')) {
-                localStorage.removeItem('currentAdmin');
-                localStorage.removeItem('isAdminLoggedIn');
-                showToast('Logged out successfully');
-                setTimeout(() => {
-                    window.location.href = '/land.html';
-                }, 500);
+        newLogout.addEventListener('click', async () => {
+            const isMobile = window.innerWidth <= 768;
+            
+            const confirmModal = document.createElement('div');
+            confirmModal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.7);
+                backdrop-filter: blur(8px);
+                z-index: 20000;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                animation: fadeInModal 0.2s ease;
+                padding: ${isMobile ? '16px' : '0'};
+            `;
+            
+            confirmModal.innerHTML = `
+                <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+                    <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(245, 158, 11, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'};">
+                        <svg width="${isMobile ? '28' : '32'}" height="${isMobile ? '28' : '32'}" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Logout?</h3>
+                    <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">Are you sure you want to logout? You will need to login again to access your account.</p>
+                    <div style="display: flex; gap: 12px; flex-direction: ${isMobile ? 'column' : 'row'};">
+                        <button id="logoutCancelBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: var(--text); cursor: pointer; min-height: 48px;">Cancel</button>
+                        <button id="logoutConfirmBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: #DC2626; border: none; border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: white; cursor: pointer; min-height: 48px;">Logout</button>
+                    </div>
+                </div>
+            `;
+            
+            // Add animations if not present
+            if (!document.querySelector('#modal-animations')) {
+                const style = document.createElement('style');
+                style.id = 'modal-animations';
+                style.textContent = `
+                    @keyframes fadeInModal {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideUpModal {
+                        from { opacity: 0; transform: translateY(30px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                `;
+                document.head.appendChild(style);
             }
+            
+            document.body.appendChild(confirmModal);
+            document.body.style.overflow = 'hidden';
+            
+            const cleanup = () => {
+                confirmModal.remove();
+                document.body.style.overflow = '';
+            };
+            
+            document.getElementById('logoutCancelBtn').onclick = () => {
+                cleanup();
+                showToast('Logout cancelled', 'info');
+            };
+            
+            document.getElementById('logoutConfirmBtn').onclick = () => {
+                cleanup();
+                showToast('Logging out...', 'info');
+                
+                setTimeout(() => {
+                    localStorage.removeItem('currentAdmin');
+                    localStorage.removeItem('isAdminLoggedIn');
+                    showToast('✓ Logged out successfully', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/land.html';
+                    }, 500);
+                }, 500);
+            };
         });
     }
     
@@ -795,10 +995,12 @@ function checkAuth() {
 document.addEventListener('DOMContentLoaded', async () => {
     if (!checkAuth()) return;
     
-    await loadIncidents();  // Load from Supabase
-    setupRealtimeSubscription();  // Listen for real-time changes
-    setupNavigation();
+    // Initialize dark mode first
     initDarkMode();
+    
+    await loadIncidents();
+    setupRealtimeSubscription();
+    setupNavigation();
     loadAdminProfile();
     updateDrawerActiveState();
     

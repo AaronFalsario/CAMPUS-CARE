@@ -5,9 +5,9 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 let students = [];
-let editingStudentId = null;
 let currentAdmin = null;
 let realtimeSubscription = null;
+let activeToasts = [];
 
 // ========== NOTIFICATION SYSTEM ==========
 let notifications = [];
@@ -81,6 +81,149 @@ function initDarkMode() {
             }
         });
     }
+}
+
+// ========== IMPROVED TOAST NOTIFICATION ==========
+function showToast(message, type = 'success') {
+    // Remove existing toasts
+    activeToasts.forEach(toast => {
+        if (toast && toast.parentNode) {
+            if (toast.dataset.timeoutId) clearTimeout(parseInt(toast.dataset.timeoutId));
+            toast.remove();
+        }
+    });
+    activeToasts = [];
+    
+    const toast = document.createElement('div');
+    
+    let icon = '';
+    let bgColor = '';
+    let borderColor = '';
+    
+    switch (type) {
+        case 'success': 
+            icon = '✓'; 
+            bgColor = '#10B981'; 
+            borderColor = '#059669'; 
+            break;
+        case 'error': 
+            icon = '✗'; 
+            bgColor = '#DC2626'; 
+            borderColor = '#991B1B'; 
+            break;
+        case 'warning': 
+            icon = '⚠️'; 
+            bgColor = '#F59E0B'; 
+            borderColor = '#D97706'; 
+            break;
+        case 'info': 
+            icon = 'ℹ️'; 
+            bgColor = '#3B82F6'; 
+            borderColor = '#2563EB'; 
+            break;
+        case 'delete': 
+            icon = '🗑️'; 
+            bgColor = '#EF4444'; 
+            borderColor = '#B91C1C'; 
+            break;
+        default: 
+            icon = '✓'; 
+            bgColor = '#10B981'; 
+            borderColor = '#059669';
+    }
+    
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: ${bgColor};
+        color: white;
+        padding: 14px 20px;
+        border-radius: 16px;
+        z-index: 10000;
+        animation: toastSlideIn 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
+        font-size: 14px;
+        max-width: 380px;
+        min-width: 280px;
+        border-left: 4px solid ${borderColor};
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    `;
+    
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; font-size: 18px; font-weight: bold; flex-shrink: 0;">
+            ${icon}
+        </div>
+        <div style="flex: 1; line-height: 1.4; word-break: break-word;">
+            ${message}
+        </div>
+        <button class="toast-close" style="background: none; border: none; color: white; cursor: pointer; font-size: 18px; padding: 4px; opacity: 0.7; flex-shrink: 0;">&times;</button>
+    `;
+    
+    // Hover effect
+    toast.onmouseenter = () => {
+        toast.style.transform = 'translateX(-6px)';
+    };
+    toast.onmouseleave = () => {
+        toast.style.transform = 'translateX(0)';
+    };
+    
+    // Close button
+    const closeBtn = toast.querySelector('.toast-close');
+    if (closeBtn) {
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        };
+    }
+    
+    // Click anywhere to close
+    toast.onclick = (e) => {
+        if (e.target !== closeBtn) {
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        }
+    };
+    
+    document.body.appendChild(toast);
+    activeToasts.push(toast);
+    
+    // Auto-remove after duration
+    let duration = 3000;
+    if (type === 'delete') duration = 4000;
+    if (type === 'error') duration = 4000;
+    
+    const timeoutId = setTimeout(() => {
+        if (toast && toast.parentNode) {
+            toast.remove();
+            const index = activeToasts.indexOf(toast);
+            if (index > -1) activeToasts.splice(index, 1);
+        }
+    }, duration);
+    
+    toast.dataset.timeoutId = timeoutId;
+}
+
+// Add CSS animations for toast
+const toastStyle = document.createElement('style');
+toastStyle.textContent = `
+    @keyframes toastSlideIn {
+        from { opacity: 0; transform: translateX(50px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+`;
+if (!document.querySelector('#toast-animations')) {
+    toastStyle.id = 'toast-animations';
+    document.head.appendChild(toastStyle);
 }
 
 // ========== NOTIFICATION FUNCTIONS ==========
@@ -240,14 +383,6 @@ window.clearAllNotifications = function () {
     showToast('All notifications cleared', 'success');
 };
 
-function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast-notification ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
-
 function getTimeAgo(dateString) {
     if (!dateString) return 'Just now';
     const date = new Date(dateString);
@@ -255,60 +390,6 @@ function getTimeAgo(dateString) {
     if (h < 1) return 'Just now';
     if (h < 24) return `${h}h ago`;
     return `${Math.floor(h / 24)}d ago`;
-}
-
-// ========== UPDATE STUDENT STATUS BASED ON LAST_LOGIN AND LAST_LOGOUT ==========
-// A student is ACTIVE if:
-//   - They have a last_login timestamp
-//   - They have NOT logged out after that login (last_logout < last_login or no logout)
-//   - Their last_login was within the past 30 minutes
-// As soon as a student logs in, last_login is updated → they become active instantly.
-async function updateStudentStatusFromAuth() {
-    try {
-        const now = new Date();
-        let hasChanges = false;
-
-        for (const student of students) {
-            const lastLogin = student.last_login ? new Date(student.last_login) : null;
-            const lastLogout = student.last_logout ? new Date(student.last_logout) : null;
-
-            let isActive = false;
-
-            if (!lastLogin) {
-                // Never logged in → inactive
-                isActive = false;
-            } else if (lastLogout && lastLogout > lastLogin) {
-                // Logged out after last login → inactive
-                isActive = false;
-            } else {
-                // Logged in and not logged out → active if within 30 min
-                const minutesSinceLogin = (now - lastLogin) / (1000 * 60);
-                isActive = minutesSinceLogin < 30;
-            }
-
-            const newStatus = isActive ? 'active' : 'inactive';
-
-            if (student.status !== newStatus) {
-                const { error } = await supabase
-                    .from('student')
-                    .update({ status: newStatus })
-                    .eq('id', student.id);
-
-                if (!error) {
-                    student.status = newStatus;
-                    hasChanges = true;
-                    console.log(`${student.name} → ${newStatus}`);
-                }
-            }
-        }
-
-        if (hasChanges) {
-            renderStudents();
-            updateStats();
-        }
-    } catch (error) {
-        console.error('Error updating status:', error);
-    }
 }
 
 // ========== GET STUDENT REPORT COUNT ==========
@@ -348,12 +429,7 @@ async function loadStudents() {
                     name: s.full_name || 'Unknown',
                     idNumber: s.student_id || 'N/A',
                     email: s.email || 'N/A',
-                    course: s.course || 'Not Set',
-                    year: s.year_level || '1',
-                    status: s.status || 'inactive',
-                    reports: reportCount,
-                    last_login: s.last_login || s.created_at || null,
-                    last_logout: s.last_logout || null
+                    reports: reportCount
                 };
             }));
             students = studentsWithReports;
@@ -361,7 +437,6 @@ async function loadStudents() {
             students = [];
         }
 
-        await updateStudentStatusFromAuth();
         renderStudents();
         updateStats();
     } catch (error) {
@@ -387,55 +462,21 @@ async function updateAllReportCounts() {
 }
 
 // ========== REAL-TIME SUBSCRIPTION ==========
-// Listens for changes to the student table — including last_login updates
-// so the admin dashboard reflects active status the moment a student logs in.
 function setupRealtimeSubscription() {
     if (realtimeSubscription) return;
 
     realtimeSubscription = supabase
         .channel('student-management-changes')
         .on('postgres_changes',
-            { event: '*', schema: 'public', table: 'student' },
+            { event: 'INSERT', schema: 'public', table: 'student' },
             async (payload) => {
-                console.log('Real-time student update:', payload.eventType);
-
-                if (payload.eventType === 'INSERT') {
-                    addInternalNotification(
-                        'New Student Registered',
-                        `${payload.new.full_name} has created an account`,
-                        false
-                    );
-                    showToast('📢 New student registered!', 'info');
-                }
-
-                // On UPDATE: if last_login changed, mark student active immediately
-                if (payload.eventType === 'UPDATE') {
-                    const updated = payload.new;
-                    const student = students.find(s => s.id === updated.id);
-                    if (student) {
-                        const prevLogin = student.last_login;
-                        student.last_login = updated.last_login;
-                        student.last_logout = updated.last_logout;
-
-                        // If last_login just changed and no logout after it → set active
-                        if (
-                            updated.last_login &&
-                            updated.last_login !== prevLogin &&
-                            (!updated.last_logout || new Date(updated.last_logout) < new Date(updated.last_login))
-                        ) {
-                            student.status = 'active';
-                            await supabase
-                                .from('student')
-                                .update({ status: 'active' })
-                                .eq('id', student.id);
-
-                            renderStudents();
-                            updateStats();
-                            return; // skip full reload for performance
-                        }
-                    }
-                }
-
+                console.log('New student registered:', payload.new);
+                addInternalNotification(
+                    'New Student Registered',
+                    `${payload.new.full_name} has created an account`,
+                    false
+                );
+                showToast('📢 New student registered!', 'info');
                 await loadStudents();
             }
         )
@@ -452,7 +493,7 @@ function renderStudents() {
     if (!tbody) return;
 
     if (students.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:60px;">👨‍🎓 No students found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:60px;">👨‍🎓 No students found</td></tr>`;
         return;
     }
 
@@ -468,190 +509,109 @@ function renderStudents() {
                 </div>
             </td>
             <td><strong>${escapeHtml(student.idNumber)}</strong></td>
-            <td>${escapeHtml(student.course)} - ${student.year}${getYearSuffix(student.year)} Year</td>
             <td><span class="badge-active">${student.reports || 0} reports</span></td>
             <td>
-                <span class="status-badge ${student.status === 'active' ? 'status-active' : 'status-inactive'}">
-                    ${student.status === 'active' ? '🟢 Active' : '⚫ Inactive'}
-                </span>
-            </td>
-            <td>${formatDate(student.last_login)}</td>
-            <td>
                 <div class="action-btns">
-                    <button class="action-btn edit-student" data-id="${student.id}" title="Edit">✏️</button>
-                    <button class="action-btn del delete-student" data-id="${student.id}" title="Delete">🗑️</button>
+                    <button class="action-btn del delete-student" data-id="${student.id}" title="Delete Student">🗑️</button>
                 </div>
             </td>
         </tr>
     `).join('');
 
-    document.querySelectorAll('.edit-student').forEach(btn => {
-        btn.onclick = () => editStudent(btn.dataset.id);
-    });
     document.querySelectorAll('.delete-student').forEach(btn => {
         btn.onclick = () => deleteStudent(btn.dataset.id);
     });
 }
 
-// ========== DELETE STUDENT ==========
+// ========== IMPROVED DELETE STUDENT ==========
 async function deleteStudent(id) {
     const student = students.find(s => s.id == id);
     if (!student) return;
-
-    if (!confirm(`⚠️ WARNING: This will permanently delete "${student.name}"\n\nThis action CANNOT be undone!`)) return;
-
-    showToast('Deleting student account...', 'info');
-
-    try {
-        const { error } = await supabase.from('student').delete().eq('id', id);
-
-        if (error) {
-            showToast('Failed to delete student', 'error');
-            return;
+    
+    // Create confirmation modal
+    const confirmModal = document.createElement('div');
+    confirmModal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        backdrop-filter: blur(8px);
+        z-index: 20000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fadeInModal 0.2s ease;
+    `;
+    
+    confirmModal.innerHTML = `
+        <div style="background: var(--surface); border-radius: 28px; max-width: 400px; width: 90%; padding: 28px; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+            <div style="width: 64px; height: 64px; background: rgba(220, 38, 38, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                </svg>
+            </div>
+            <h3 style="font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 12px;">Delete Student?</h3>
+            <p style="font-size: 14px; color: var(--muted); margin-bottom: 28px;">"<strong style="color: var(--text);">${escapeHtml(student.name)}</strong>" will be permanently deleted. This action cannot be undone.</p>
+            <div style="display: flex; gap: 12px;">
+                <button id="confirmCancelBtn" style="flex: 1; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer;">Cancel</button>
+                <button id="confirmDeleteBtn" style="flex: 1; padding: 12px; background: #DC2626; border: none; border-radius: 40px; font-size: 14px; font-weight: 600; color: white; cursor: pointer;">Delete</button>
+            </div>
+        </div>
+    `;
+    
+    // Add modal animations
+    const modalStyle = document.createElement('style');
+    modalStyle.textContent = `
+        @keyframes fadeInModal {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
-
-        showToast(`✓ ${student.name} has been deleted`, 'success');
-        addInternalNotification('Student Deleted', `${student.name} has been removed`, false);
-
-        students = students.filter(s => s.id != id);
-        renderStudents();
-        updateStats();
-    } catch (error) {
-        console.error('Delete error:', error);
-        showToast('Failed to delete student', 'error');
+        @keyframes slideUpModal {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    `;
+    if (!document.querySelector('#modal-animations')) {
+        modalStyle.id = 'modal-animations';
+        document.head.appendChild(modalStyle);
     }
-}
-
-// ========== EDIT STUDENT ==========
-// Only allows editing Status — Name, ID Number, and Email are read-only.
-// Course and Year fields have been removed from the modal.
-function editStudent(id) {
-    const student = students.find(s => s.id == id);
-    if (!student) return;
-
-    editingStudentId = id;
-
-    // Populate fields
-    document.getElementById('studentId').value = student.id;
-    document.getElementById('studentFullName').value = student.name;
-    document.getElementById('studentIdNumber').value = student.idNumber;
-    document.getElementById('studentEmail').value = student.email;
-    document.getElementById('studentStatus').value = student.status;
-
-    // Lock read-only fields
-    ['studentFullName', 'studentIdNumber', 'studentEmail'].forEach(fieldId => {
-        const el = document.getElementById(fieldId);
-        if (el) {
-            el.disabled = true;
-            el.style.opacity = '0.6';
-            el.style.cursor = 'not-allowed';
-        }
-    });
-
-    document.getElementById('modalTitle').textContent = 'Edit Student';
-    openModal();
-}
-
-// ========== RESET FORM ==========
-function resetFormForAdd() {
-    // Re-enable all fields
-    ['studentFullName', 'studentIdNumber', 'studentEmail'].forEach(fieldId => {
-        const el = document.getElementById(fieldId);
-        if (el) {
-            el.disabled = false;
-            el.style.opacity = '1';
-            el.style.cursor = '';
-        }
-    });
-
-    const form = document.getElementById('studentForm');
-    if (form) form.reset();
-
-    const studentIdInput = document.getElementById('studentId');
-    if (studentIdInput) studentIdInput.value = '';
-
-    editingStudentId = null;
-}
-
-// ========== FORM SUBMIT ==========
-document.addEventListener('DOMContentLoaded', () => {
-    const studentForm = document.getElementById('studentForm');
-    if (studentForm) {
-        studentForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const isEditing = editingStudentId !== null;
-
-            const fullName = document.getElementById('studentFullName')?.value.trim() || '';
-            const studentId = document.getElementById('studentIdNumber')?.value.trim() || '';
-            const email = document.getElementById('studentEmail')?.value.trim() || '';
-            const status = document.getElementById('studentStatus')?.value || 'inactive';
-            const existingId = document.getElementById('studentId')?.value;
-
-            if (!fullName || !studentId || !email) {
-                showToast('Please fill in all required fields', 'error');
-                return;
-            }
-
-            if (isEditing && existingId) {
-                // UPDATE — only status is editable
-                const { error } = await supabase
-                    .from('student')
-                    .update({ status, updated_at: new Date().toISOString() })
-                    .eq('id', existingId);
-
-                if (error) {
-                    showToast('Failed to update student', 'error');
-                    console.error('Update error:', error);
-                    return;
-                }
-
-                showToast(`✓ ${fullName} has been updated`, 'success');
-                addInternalNotification('Student Updated', `${fullName}'s status has been changed to ${status}`, false);
-            } else {
-                // INSERT new student
-                const { error } = await supabase
-                    .from('student')
-                    .insert([{
-                        full_name: fullName,
-                        student_id: studentId,
-                        email,
-                        status,
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    }]);
-
-                if (error) {
-                    showToast('Failed to add student', 'error');
-                    console.error('Insert error:', error);
-                    return;
-                }
-
-                showToast(`✓ ${fullName} has been added`, 'success');
-                addInternalNotification('Student Added', `${fullName} has been added to the system`, false);
-            }
-
-            await loadStudents();
-            resetFormForAdd();
-            closeModal();
-        });
-    }
-});
-
-// ========== MODAL HELPERS ==========
-function openModal() {
-    const modal = document.getElementById('studentModal');
-    if (modal) modal.classList.add('active');
+    
+    document.body.appendChild(confirmModal);
     document.body.style.overflow = 'hidden';
-}
-
-function closeModal() {
-    const modal = document.getElementById('studentModal');
-    if (modal) modal.classList.remove('active');
-    resetFormForAdd();
-    const modalTitle = document.getElementById('modalTitle');
-    if (modalTitle) modalTitle.textContent = 'Add New Student';
-    document.body.style.overflow = '';
+    
+    const cleanup = () => {
+        confirmModal.remove();
+        document.body.style.overflow = '';
+    };
+    
+    document.getElementById('confirmCancelBtn').onclick = () => {
+        cleanup();
+        showToast('Deletion cancelled', 'info');
+    };
+    
+    document.getElementById('confirmDeleteBtn').onclick = async () => {
+        cleanup();
+        showToast(`Deleting "${student.name}"...`, 'info');
+        
+        try {
+            const { error } = await supabase.from('student').delete().eq('id', id);
+            if (error) throw error;
+            
+            showToast(`✓ "${student.name}" has been deleted`, 'delete');
+            addInternalNotification('Student Deleted', `${student.name} has been removed`, false);
+            
+            students = students.filter(s => s.id != id);
+            renderStudents();
+            updateStats();
+        } catch (error) {
+            console.error('Delete error:', error);
+            showToast('Failed to delete student', 'error');
+        }
+    };
 }
 
 // ========== HELPER FUNCTIONS ==========
@@ -660,34 +620,13 @@ function getInitials(name) {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 }
 
-function getYearSuffix(year) {
-    const suffixes = { 1: 'st', 2: 'nd', 3: 'rd', 4: 'th' };
-    return suffixes[year] || 'th';
-}
-
-function formatDate(dateString) {
-    if (!dateString) return 'Never';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMinutes = Math.floor((now - date) / (1000 * 60));
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
-}
-
 function updateStats() {
     const total = students.length;
-    const active = students.filter(s => s.status === 'active').length;
     const totalReports = students.reduce((sum, s) => sum + (s.reports || 0), 0);
     const avgReports = total > 0 ? (totalReports / total).toFixed(1) : 0;
 
     const el = (id) => document.getElementById(id);
     if (el('totalStudents')) el('totalStudents').textContent = total;
-    if (el('activeStudents')) el('activeStudents').textContent = active;
     if (el('totalReports')) el('totalReports').textContent = totalReports;
     if (el('avgReports')) el('avgReports').textContent = avgReports;
 }
@@ -750,7 +689,7 @@ function highlightActiveBottomNav() {
 }
 
 // ========== UI SETUP ==========
-function setupUI() {
+function setupUI() { 
     const drawer  = document.getElementById('drawer');
     const overlay = document.getElementById('overlay');
     const adminPill = document.getElementById('adminPill');
@@ -760,59 +699,77 @@ function setupUI() {
     if (adminPill) adminPill.onclick = () => { drawer?.classList.toggle('open'); overlay?.classList.toggle('open'); };
     if (notificationBell) notificationBell.onclick = (e) => { e.stopPropagation(); toggleNotificationDropdown(); };
 
-    // Add Student button
-    const addBtn = document.getElementById('addStudentBtn');
-    if (addBtn) {
-        addBtn.addEventListener('click', () => {
-            resetFormForAdd();
-            document.getElementById('modalTitle').textContent = 'Add New Student';
-            openModal();
-        });
-    }
-
-    // Close modal button
-    const closeBtn = document.getElementById('closeModalBtn');
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-
-    // Click outside modal to close
-    const modal = document.getElementById('studentModal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-    }
-
-    // Escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (modal?.classList.contains('active')) closeModal();
-            if (isNotificationDropdownOpen) {
-                document.getElementById('notificationDropdown')?.classList.remove('show');
-                isNotificationDropdownOpen = false;
-            }
-        }
-    });
-
-    // Logout
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         const newLogoutBtn = logoutBtn.cloneNode(true);
         logoutBtn.parentNode.replaceChild(newLogoutBtn, logoutBtn);
         newLogoutBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to logout?')) {
+
+        const confirmModal = document.createElement('div');
+        confirmModal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            z-index: 20000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeInModal 0.2s ease;
+        `;
+        
+        confirmModal.innerHTML = `
+            <div style="background: var(--surface); border-radius: 28px; max-width: 400px; width: 90%; padding: 28px; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+                <div style="width: 64px; height: 64px; background: rgba(220, 38, 38, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                </div>
+                <h3 style="font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 12px;">Logout?</h3>
+                <p style="font-size: 14px; color: var(--muted); margin-bottom: 28px;">Are you sure you want to logout? You will need to login again to access your account.</p>
+                <div style="display: flex; gap: 12px;">
+                    <button id="logoutCancelBtn" style="flex: 1; padding: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer;">Cancel</button>
+                    <button id="logoutConfirmBtn" style="flex: 1; padding: 12px; background: #DC2626; border: none; border-radius: 40px; font-size: 14px; font-weight: 600; color: white; cursor: pointer;">Logout</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(confirmModal);
+        document.body.style.overflow = 'hidden';
+        
+        const cleanup = () => {
+            confirmModal.remove();
+            document.body.style.overflow = '';
+        };
+        
+        document.getElementById('logoutCancelBtn').onclick = () => {
+            cleanup();
+            showToast('Logout cancelled', 'info');
+        };
+        
+        document.getElementById('logoutConfirmBtn').onclick = () => {
+            cleanup();
+            showToast('Logging out...', 'info');
+            
+            setTimeout(() => {
                 localStorage.removeItem('currentStudent');
                 localStorage.removeItem('currentAdmin');
                 localStorage.removeItem('isAdminLoggedIn');
-                showToast('Logged out successfully', 'success');
+                showToast('✓ Logged out successfully', 'success');
                 setTimeout(() => window.location.href = '/land.html', 500);
-            }
-        });
-    }
+            }, 500);
+        };
+    });
 }
+}   
 
 // ========== AUTO REFRESH EVERY 30 SECONDS ==========
 setInterval(() => {
-    updateStudentStatusFromAuth();
     updateAllReportCounts();
 }, 30000);
 

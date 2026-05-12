@@ -1176,3 +1176,131 @@ body.dark-mode .modal-restricted-box {
     border: 1px solid var(--border);
     font-family: monospace;
 }
+
+/* ========== DARK MODE - MAKE ALL TEXT WHITE ========== */
+body.dark-mode,
+body.dark-mode * {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode .badge,
+body.dark-mode .modal-status-badge,
+body.dark-mode .modal-priority-badge,
+body.dark-mode .modal-category-badge {
+    color: inherit !important;
+}
+
+body.dark-mode .teal-text,
+body.dark-mode .brand-name,
+body.dark-mode .drawer-item.active,
+body.dark-mode .stat-number,
+body.dark-mode .page-title,
+body.dark-mode .modal-header h3 {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode button:not(.drawer-item):not(.bottom-nav-item),
+body.dark-mode .btn-save,
+body.dark-mode .btn-cancel,
+body.dark-mode .export-btn,
+body.dark-mode .action-btn,
+body.dark-mode .filter-chip,
+body.dark-mode .page-btn {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea,
+body.dark-mode .filter-input,
+body.dark-mode .filter-select,
+body.dark-mode .search-input,
+body.dark-mode .modal-status-select {
+    color: #FFFFFF !important;
+    background: var(--surface) !important;
+}
+
+body.dark-mode input::placeholder,
+body.dark-mode .search-input::placeholder {
+    color: #94A3B8 !important;
+}
+
+body.dark-mode a,
+body.dark-mode svg,
+body.dark-mode .drawer-item svg {
+    color: #FFFFFF !important;
+    stroke: #FFFFFF !important;
+}
+
+body.dark-mode .drawer,
+body.dark-mode .drawer *,
+body.dark-mode .drawer-item,
+body.dark-mode .drawer-name,
+body.dark-mode .drawer-role,
+body.dark-mode .drawer-logout {
+    color: #FFFFFF !important;
+}
+
+
+body.dark-mode .bottom-nav,
+body.dark-mode .bottom-nav-item,
+body.dark-mode .bottom-nav-item span,
+body.dark-mode .bottom-nav-item svg {
+    color: #FFFFFF !important;
+    stroke: #FFFFFF !important;
+}
+
+body.dark-mode .notification-dropdown,
+body.dark-mode .notification-dropdown *,
+body.dark-mode .notification-dropdown-title,
+body.dark-mode .notification-dropdown-message,
+body.dark-mode .notification-dropdown-time {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode .modal-container,
+body.dark-mode .modal-container *,
+body.dark-mode .info-label,
+body.dark-mode .info-value,
+body.dark-mode .description-text {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode table,
+body.dark-mode th,
+body.dark-mode td,
+body.dark-mode .table-wrap * {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode .stat-card,
+body.dark-mode .stat-number,
+body.dark-mode .stat-label,
+body.dark-mode .stat-icon {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode .page-header,
+body.dark-mode .page-title,
+body.dark-mode .page-sub {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode .filter-bar,
+body.dark-mode .filter-label,
+body.dark-mode .filter-group {
+    color: #FFFFFF !important;
+}
+
+body.dark-mode .badge.b-security,
+body.dark-mode .badge.b-maintenance,
+body.dark-mode .badge.b-janitorial,
+body.dark-mode .badge.b-facilities,
+body.dark-mode .badge.b-high,
+body.dark-mode .badge.b-medium,
+body.dark-mode .badge.b-low,
+body.dark-mode .badge.b-pending,
+body.dark-mode .badge.b-inprogress,
+body.dark-mode .badge.b-resolved {
+    color: inherit !important;
+}
