@@ -88,7 +88,6 @@ body {
     transform: translateX(0);
     box-shadow: 2px 0 12px var(--shadow);
     transition: transform 0.3s ease;
-    animation: none !important;
 }
 
 body.dark-mode .drawer {
@@ -223,10 +222,10 @@ body.dark-mode .drawer {
     padding: 0 28px;
     position: fixed;
     top: 0;
+    left: var(--sidebar-width);
+    right: 0;
     z-index: 100;
-    margin-left: var(--sidebar-width);
-    width: calc(100% - var(--sidebar-width));
-    animation: none !important;
+    width: auto;
 }
 
 .brand-logo {
@@ -308,8 +307,10 @@ body.dark-mode .moon-icon { display: block; }
 /* ========== MAIN CONTENT ========== */
 .main-content {
     margin-left: var(--sidebar-width);
-    padding: calc(var(--topbar-height) + 28px) 36px 48px;
+    margin-top: var(--topbar-height);
+    padding: 28px 36px 48px;
     max-width: 1400px;
+    width: calc(100% - var(--sidebar-width));
     animation: fadeInUp 0.5s ease-out;
 }
 
@@ -356,6 +357,7 @@ body.dark-mode .page-header {
     transition: transform 0.2s;
     opacity: 0;
     animation: fadeInUp 0.4s ease-out forwards;
+    overflow: hidden;
 }
 
 .stat-card:nth-child(1) { animation-delay: 0.05s; }
@@ -377,6 +379,12 @@ body.dark-mode .page-header {
     align-items: center;
     justify-content: center;
     font-size: 24px;
+    flex-shrink: 0;
+}
+
+.stat-info {
+    min-width: 0;
+    flex: 1;
 }
 
 .stat-value {
@@ -384,6 +392,7 @@ body.dark-mode .page-header {
     font-weight: 800;
     font-family: 'DM Mono', monospace;
     color: var(--text);
+    line-height: 1.2;
 }
 
 .stat-label {
@@ -407,6 +416,7 @@ body.dark-mode .page-header {
     padding: 20px;
     opacity: 0;
     animation: fadeInUp 0.4s ease-out 0.1s forwards;
+    overflow: hidden;
 }
 
 .chart-card:nth-child(1) { animation-delay: 0.1s; }
@@ -713,6 +723,7 @@ body.dark-mode .b-resolved { color: var(--green); }
     color: var(--muted);
     width: 100px;
     font-size: 12px;
+    flex-shrink: 0;
 }
 
 .modal-value {
@@ -760,7 +771,6 @@ body.dark-mode .b-resolved { color: var(--green); }
     justify-content: space-evenly;
     padding: 8px 16px;
     z-index: 400;
-    animation: none !important;
 }
 
 .bottom-nav-item {
@@ -809,7 +819,7 @@ body.dark-mode .b-resolved { color: var(--green); }
     }
     
     .topbar {
-        margin-left: 0;
+        left: 0;
         width: 100%;
         padding: 0 16px;
         height: 56px;
@@ -837,7 +847,9 @@ body.dark-mode .b-resolved { color: var(--green); }
     
     .main-content {
         margin-left: 0;
-        padding: 72px 16px 80px;
+        margin-top: 56px;
+        padding: 20px 16px 80px;
+        width: 100%;
     }
     
     .stats-grid {
@@ -865,21 +877,7 @@ body.dark-mode .b-resolved { color: var(--green); }
     }
     
     .chart-container {
-        height: 200px;
-    }
-    
-    .filter-bar {
-        flex-wrap: wrap;
-    }
-    
-    .search-bar {
-        max-width: 100%;
-        width: 100%;
-        order: 1;
-    }
-    
-    .export-btn {
-        display: none;
+        height: 220px;
     }
     
     .page-header {
@@ -916,13 +914,44 @@ body.dark-mode .b-resolved { color: var(--green); }
         font-size: 13px;
     }
     
-    .pagination {
-        gap: 6px;
+    /* HIDE FILTER BAR (search, chips, export) ON MOBILE */
+    .filter-bar {
+        display: none !important;
     }
     
-    .page-btn {
-        padding: 6px 10px;
-        font-size: 12px;
+    /* HIDE TABLE CONTAINER ON MOBILE */
+    .table-container {
+        display: none !important;
+    }
+    
+    /* HIDE PAGINATION ON MOBILE */
+    .pagination {
+        display: none !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .stat-card {
+        padding: 12px;
+    }
+    
+    .stat-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
+    
+    .stat-value {
+        font-size: 20px;
+    }
+    
+    .chart-container {
+        height: 200px;
     }
 }
 
@@ -947,6 +976,7 @@ body.dark-mode .b-resolved { color: var(--green); }
     
     .stat-card {
         padding: 10px;
+        gap: 8px;
     }
     
     .stat-icon {
@@ -965,11 +995,6 @@ body.dark-mode .b-resolved { color: var(--green); }
     
     .chart-container {
         height: 180px;
-    }
-    
-    .filter-chip {
-        padding: 4px 12px;
-        font-size: 11px;
     }
     
     .modal-container {
@@ -1017,6 +1042,29 @@ body.dark-mode .b-resolved { color: var(--green); }
         display: none !important;
     }
     .drawer {
+        display: flex !important;
+    }
+    
+    .topbar {
+        left: var(--sidebar-width);
+        width: auto;
+    }
+    
+    .main-content {
+        margin-left: var(--sidebar-width);
+        width: auto;
+    }
+    
+    /* Ensure filter bar, table, pagination are visible on desktop */
+    .filter-bar {
+        display: flex !important;
+    }
+    
+    .table-container {
+        display: block !important;
+    }
+    
+    .pagination {
         display: flex !important;
     }
 }
@@ -1092,38 +1140,6 @@ body.dark-mode .table-container {
     color: var(--text) !important;
 }
 
-@media (max-width: 768px) {
-
-    .filter-bar {
-        display: none !important;
-    }
-    
-    .search-bar {
-        display: none !important;
-    }
-
-    .filter-chip {
-        display: none !important;
-    }
-    
-    .table-container {
-        display: none !important;
-    }
-
-    table,
-    thead,
-    tbody,
-    tr,
-    th,
-    td {
-        display: none !important;
-    }
-
-    .pagination {
-        display: none !important;
-    }
-}
-
 /* ========== AGGRESSIVE DARK MODE - ALL TEXT WHITE ========== */
 body.dark-mode,
 body.dark-mode div,
@@ -1150,8 +1166,6 @@ body.dark-mode .info-value,
 body.dark-mode .m-card-title,
 body.dark-mode .m-field-value,
 body.dark-mode .m-field-label,
-body.dark-mode .brand-name,
-body.dark-mode .brand-subtitle,
 body.dark-mode .page-title,
 body.dark-mode .page-sub,
 body.dark-mode .filter-label,
@@ -1170,6 +1184,18 @@ body.dark-mode .description-text,
 body.dark-mode .btn-cancel,
 body.dark-mode .btn-save {
     color: #FFFFFF !important;
+}
+
+/* Keep brand gradient */
+body.dark-mode .brand-name {
+    color: transparent !important;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+body.dark-mode .brand-subtitle {
+    color: var(--muted) !important;
 }
 
 /* Inputs and selects */
@@ -1216,12 +1242,4 @@ body.dark-mode .page-btn,
 body.dark-mode .filter-chip,
 body.dark-mode .view-btn {
     color: #FFFFFF !important;
-}
-
-/* Keep brand gradient visible */
-body.dark-mode .brand-name {
-    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent !important;
 }
