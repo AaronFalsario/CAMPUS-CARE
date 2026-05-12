@@ -33,6 +33,23 @@ function showEmailError(inputElement, isValid) {
     }
 }
 
+// ========== Helper to get email from student ID ==========
+async function getEmailFromStudentId(studentId) {
+    try {
+        const { data, error } = await supabase
+            .from('student')
+            .select('email')
+            .eq('student_id', studentId.trim())
+            .maybeSingle();
+        
+        if (error) throw error;
+        return data ? data.email : null;
+    } catch (error) {
+        console.error('Error fetching email by student ID:', error);
+        return null;
+    }
+}
+
 // ========== LOADER ==========
 function showLoader() {
     if (loaderOverlay) loaderOverlay.classList.add('show');
@@ -201,21 +218,6 @@ async function updateStudentActivityOnLogin(userId) {
     }
 }
 
-// ========== REAL-TIME EMAIL VALIDATION ==========
-const loginEmailInput = document.getElementById('loginEmail');
-if (loginEmailInput) {
-    loginEmailInput.addEventListener('input', function () {
-        showEmailError(this, isValidGordonEmail(this.value));
-    });
-}
-
-const signupEmailInput = document.getElementById('signupEmail');
-if (signupEmailInput) {
-    signupEmailInput.addEventListener('input', function () {
-        showEmailError(this, isValidGordonEmail(this.value));
-    });
-}
-
 // ========== FORM TOGGLE ==========
 if (showSignupBtn) {
     showSignupBtn.addEventListener('click', (e) => {
@@ -245,31 +247,111 @@ togglePasswordVisibility(
     document.getElementById('toggleSignupPassword')
 );
 
-// ========== LOGIN ==========
+// ========== SETUP SIGNUP EMAIL INPUT WITH AUTO-DOMAIN ==========
+function setupSignupEmailInput() {
+    const signupEmailInput = document.getElementById('signupEmail');
+    if (signupEmailInput) {
+        // Change placeholder
+        signupEmailInput.placeholder = "Enter your Student ID Number";
+        
+        // Add visual suffix
+        const wrapper = signupEmailInput.parentElement;
+        wrapper.style.position = 'relative';
+        
+        const suffix = document.createElement('span');
+        suffix.textContent = '@gordoncollege.edu.ph';
+        suffix.style.position = 'absolute';
+        suffix.style.right = '12px';
+        suffix.style.top = '50%';
+        suffix.style.transform = 'translateY(-50%)';
+        suffix.style.fontSize = '12px';
+        suffix.style.color = '#64748b';
+        suffix.style.backgroundColor = '#f1f5f9';
+        suffix.style.padding = '2px 8px';
+        suffix.style.borderRadius = '4px';
+        suffix.style.pointerEvents = 'none';
+        wrapper.appendChild(suffix);
+        
+        // Adjust input padding
+        signupEmailInput.style.paddingRight = '160px';
+        
+        // Handle input to remove any @ symbol
+        signupEmailInput.addEventListener('input', function(e) {
+            let value = this.value;
+            if (value.includes('@')) {
+                value = value.replace(/@.*$/, '');
+                this.value = value;
+            }
+        });
+        
+        // Add hint text
+        const hint = document.createElement('div');
+        hint.className = 'email-hint';
+        hint.style.marginTop = '5px';
+        hint.innerHTML = '<i class="fas fa-info-circle"></i> @gordoncollege.edu.ph will be added automatically';
+        signupEmailInput.parentElement.parentElement.appendChild(hint);
+        
+        // Change icon to ID card
+        const icon = signupEmailInput.parentElement.querySelector('i');
+        if (icon) {
+            icon.classList.remove('fa-envelope');
+            icon.classList.add('fa-id-card');
+        }
+    }
+}
+
+// ========== SETUP LOGIN INPUT (Student ID only) ==========
+function setupLoginInput() {
+    const loginInput = document.getElementById('loginEmail');
+    if (loginInput) {
+        // Change placeholder
+        loginInput.placeholder = "Enter your Student ID Number";
+        
+        // Add hint text below
+        const hint = document.createElement('div');
+        hint.className = 'email-hint';
+        hint.style.marginTop = '5px';
+        hint.innerHTML = '<i class="fas fa-info-circle"></i> Enter your Student ID number (e.g., 202411745)';
+        loginInput.parentElement.parentElement.appendChild(hint);
+        
+        // Change icon to ID card
+        const icon = loginInput.parentElement.querySelector('i');
+        if (icon) {
+            icon.classList.remove('fa-envelope');
+            icon.classList.add('fa-id-card');
+        }
+    }
+}
+
+// ========== LOGIN - Student ID only ==========
 if (loginBtn) {
     loginBtn.addEventListener('click', async () => {
-        const email    = document.getElementById('loginEmail').value.trim();
+        const studentId = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
 
-        if (!email || !password) {
-            showNotification('Please fill in all fields', true);
-            return;
-        }
-
-        if (!isValidGordonEmail(email)) {
-            showNotification('Please use your @gordoncollege.edu.ph email address.', true);
-            document.getElementById('loginEmail').classList.add('domain-error');
+        if (!studentId || !password) {
+            showNotification('Please enter your Student ID and Password', true);
             return;
         }
 
         showLoader();
 
         try {
+            // Get email from student ID
+            const email = await getEmailFromStudentId(studentId);
+            
+            if (!email) {
+                showNotification('Student ID not found. Please sign up first.', true);
+                hideLoader();
+                return;
+            }
+
+            // Login with the email
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             
             if (error) {
                 if (error.message.includes('Invalid login credentials')) {
-                    throw new Error('Invalid email or password. Please try again.');
+                    throw new Error('Invalid Student ID or password. Please try again.');
                 } else if (error.message.includes('Email not confirmed')) {
                     throw new Error('Please verify your email first. Check your inbox for the confirmation link.');
                 } else {
@@ -312,7 +394,7 @@ if (loginBtn) {
                     .insert([{
                         id: data.user.id,
                         full_name: data.user.user_metadata?.full_name || email.split('@')[0],
-                        student_id: data.user.user_metadata?.student_id || 'N/A',
+                        student_id: studentId,
                         email: email,
                         status: 'active',
                         is_active: true,
@@ -333,11 +415,11 @@ if (loginBtn) {
                     
                 if (newStudentData) {
                     localStorage.setItem('currentStudent', JSON.stringify({
-                        name:      newStudentData.full_name,
+                        name: newStudentData.full_name,
                         studentId: newStudentData.student_id,
-                        email:     newStudentData.email,
-                        userId:    data.user.id,
-                        status:    'active'
+                        email: newStudentData.email,
+                        userId: data.user.id,
+                        status: 'active'
                     }));
                     
                     showNotification('Login successful! Redirecting...', false, 1500);
@@ -352,11 +434,11 @@ if (loginBtn) {
             await updateStudentActivityOnLogin(data.user.id);
 
             localStorage.setItem('currentStudent', JSON.stringify({
-                name:      studentData.full_name,
+                name: studentData.full_name,
                 studentId: studentData.student_id,
-                email:     studentData.email,
-                userId:    data.user.id,
-                status:    'active'
+                email: studentData.email,
+                userId: data.user.id,
+                status: 'active'
             }));
 
             showNotification('Login successful! Redirecting...', false, 1500);
@@ -372,21 +454,27 @@ if (loginBtn) {
     });
 }
 
-// ========== SIGNUP WITH EMAIL CONFIRMATION ==========
+// ========== SIGNUP - Auto-append email domain ==========
 if (signupBtn) {
     signupBtn.addEventListener('click', async () => {
         const fullName  = document.getElementById('signupName').value.trim();
         const studentId = document.getElementById('signupStudentId').value.trim();
-        const email     = document.getElementById('signupEmail').value.trim();
+        let studentIdNumber = document.getElementById('signupEmail').value.trim();
         const password  = document.getElementById('signupPassword').value;
 
-        if (!fullName || !studentId || !email || !password) {
+        if (!fullName || !studentId || !studentIdNumber || !password) {
             showNotification('Please fill in all fields', true);
             return;
         }
 
+        // Auto-append domain to create email
+        let email = studentIdNumber + '@gordoncollege.edu.ph';
+        
+        // Remove any @ symbol if user accidentally typed it
+        email = email.replace(/@+/g, '@');
+
         if (!isValidGordonEmail(email)) {
-            showNotification('You must register with a @gordoncollege.edu.ph email.', true);
+            showNotification('Invalid email format. Please use a valid Student ID.', true);
             document.getElementById('signupEmail').classList.add('domain-error');
             return;
         }
@@ -706,8 +794,10 @@ async function checkExistingSession() {
 // ========== INIT ==========
 function init() {
     addStyles();
+    setupLoginInput();
+    setupSignupEmailInput();
     checkExistingSession();
-    console.log('✅ Login page ready');
+    console.log('✅ Login page ready - Student ID only login');
 }
 
 if (document.readyState === 'loading') {
