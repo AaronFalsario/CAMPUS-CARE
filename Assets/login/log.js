@@ -201,18 +201,81 @@ async function updateStudentActivityOnLogin(userId) {
     }
 }
 
-// ========== SETUP LOGIN INPUT - Auto append domain ==========
+// ========== SETUP SIGNUP EMAIL INPUT WITH VISUAL DOMAIN SUFFIX ==========
+function setupSignupEmailInput() {
+    const signupEmailInput = document.getElementById('signupEmail');
+    if (signupEmailInput) {
+        // Change placeholder
+        signupEmailInput.placeholder = "Enter your Student ID";
+        
+        // Create wrapper for input with suffix
+        const wrapper = signupEmailInput.parentElement;
+        wrapper.style.position = 'relative';
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'center';
+        
+        // Add visual suffix that shows @gordoncollege.edu.ph
+        const suffix = document.createElement('span');
+        suffix.textContent = '@gordoncollege.edu.ph';
+        suffix.style.position = 'absolute';
+        suffix.style.right = '12px';
+        suffix.style.top = '50%';
+        suffix.style.transform = 'translateY(-50%)';
+        suffix.style.fontSize = '12px';
+        suffix.style.color = '#64748b';
+        suffix.style.backgroundColor = '#f1f5f9';
+        suffix.style.padding = '4px 8px';
+        suffix.style.borderRadius = '6px';
+        suffix.style.pointerEvents = 'none';
+        suffix.style.zIndex = '2';
+        wrapper.appendChild(suffix);
+        
+        // Adjust input padding
+        signupEmailInput.style.paddingRight = '170px';
+        
+        // Handle input to prevent @ symbol and show error if needed
+        signupEmailInput.addEventListener('input', function(e) {
+            let value = this.value;
+            // Remove any @ symbol if user tries to type it
+            if (value.includes('@')) {
+                value = value.replace(/@.*$/, '');
+                this.value = value;
+            }
+            // Remove spaces
+            if (value.includes(' ')) {
+                value = value.replace(/\s/g, '');
+                this.value = value;
+            }
+        });
+        
+        // Add hint text
+        const hint = document.createElement('div');
+        hint.className = 'email-hint';
+        hint.style.marginTop = '5px';
+        hint.innerHTML = '<i class="fas fa-info-circle"></i> Enter your Student ID - @gordoncollege.edu.ph will be added automatically';
+        signupEmailInput.parentElement.parentElement.appendChild(hint);
+        
+        // Change icon to ID card
+        const icon = signupEmailInput.parentElement.querySelector('i');
+        if (icon) {
+            icon.classList.remove('fa-envelope');
+            icon.classList.add('fa-id-card');
+        }
+    }
+}
+
+// ========== SETUP LOGIN INPUT ==========
 function setupLoginInput() {
     const loginInput = document.getElementById('loginEmail');
     if (loginInput) {
         // Change placeholder
-        loginInput.placeholder = "Enter your Student ID Number";
+        loginInput.placeholder = "Enter your Student ID";
         
-        // Add visual hint
+        // Add hint text below
         const hint = document.createElement('div');
         hint.className = 'email-hint';
         hint.style.marginTop = '5px';
-        hint.innerHTML = '<i class="fas fa-info-circle"></i> Enter your Student ID (e.g., 202411745) - @gordoncollege.edu.ph will be added automatically';
+        hint.innerHTML = '<i class="fas fa-info-circle"></i> Enter your Student ID - @gordoncollege.edu.ph will be added automatically';
         loginInput.parentElement.parentElement.appendChild(hint);
         
         // Change icon to ID card
@@ -253,7 +316,7 @@ togglePasswordVisibility(
     document.getElementById('toggleSignupPassword')
 );
 
-// ========== LOGIN - Auto append domain to student ID ==========
+// ========== LOGIN - Auto append domain ==========
 if (loginBtn) {
     loginBtn.addEventListener('click', async () => {
         let studentId = document.getElementById('loginEmail').value.trim();
@@ -264,17 +327,14 @@ if (loginBtn) {
             return;
         }
 
-        // AUTOMATICALLY ADD @gordoncollege.edu.ph TO THE STUDENT ID
+        // Automatically add @gordoncollege.edu.ph
         let email = studentId;
-        
-        // If user didn't type @gordoncollege.edu.ph, add it automatically
         if (!email.includes('@')) {
             email = studentId + '@gordoncollege.edu.ph';
         }
-        
-        // Validate email format
+
         if (!isValidGordonEmail(email)) {
-            showNotification('Please use a valid Student ID.', true);
+            showNotification('Please enter a valid Student ID.', true);
             document.getElementById('loginEmail').classList.add('domain-error');
             return;
         }
@@ -282,7 +342,6 @@ if (loginBtn) {
         showLoader();
 
         try {
-            // Login with the automatically generated email
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             
             if (error) {
@@ -390,27 +449,28 @@ if (loginBtn) {
     });
 }
 
-// ========== SIGNUP WITH EMAIL CONFIRMATION ==========
+// ========== SIGNUP - Auto append domain ==========
 if (signupBtn) {
     signupBtn.addEventListener('click', async () => {
         const fullName  = document.getElementById('signupName').value.trim();
         const studentId = document.getElementById('signupStudentId').value.trim();
-        const emailInput = document.getElementById('signupEmail').value.trim();
+        let studentIdNumber = document.getElementById('signupEmail').value.trim();
         const password  = document.getElementById('signupPassword').value;
 
-        if (!fullName || !studentId || !emailInput || !password) {
+        if (!fullName || !studentId || !studentIdNumber || !password) {
             showNotification('Please fill in all fields', true);
             return;
         }
 
-        // Auto-append domain for signup email
-        let email = emailInput;
-        if (!email.includes('@')) {
-            email = emailInput + '@gordoncollege.edu.ph';
-        }
+        // Auto-append domain
+        let email = studentIdNumber + '@gordoncollege.edu.ph';
+        email = email.replace(/@+/g, '@');
+        
+        // Remove any spaces
+        email = email.replace(/\s/g, '');
 
         if (!isValidGordonEmail(email)) {
-            showNotification('You must register with a @gordoncollege.edu.ph email.', true);
+            showNotification('Please enter a valid Student ID.', true);
             document.getElementById('signupEmail').classList.add('domain-error');
             return;
         }
@@ -731,8 +791,9 @@ async function checkExistingSession() {
 function init() {
     addStyles();
     setupLoginInput();
+    setupSignupEmailInput();
     checkExistingSession();
-    console.log('✅ Login page ready - Auto append domain');
+    console.log('✅ Login page ready - Auto append domain for both login and signup');
 }
 
 if (document.readyState === 'loading') {
