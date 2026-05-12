@@ -24,6 +24,8 @@
     --purple: #7C3AED;
     --purple-light: #F5F3FF;
     --navy: #1E3A5F;
+    --drawer-green: #0D5C45;
+    --drawer-green-dark: #094233;
     --shadow: rgba(0,0,0,0.08);
     --shadow-lg: rgba(0,0,0,0.12);
     --sidebar-width: 260px;
@@ -43,6 +45,8 @@ body.dark-mode {
     --teal-light: #064E3B;
     --teal-dark: #059669;
     --navy: #0F172A;
+    --drawer-green: #065F46;
+    --drawer-green-dark: #043425;
     --shadow: rgba(0,0,0,0.3);
     --shadow-lg: rgba(0,0,0,0.4);
     --red-light: #450A0A;
@@ -90,7 +94,7 @@ main {
     animation: none !important;
 }
 
-/* ===== DRAWER ===== */
+/* ===== DRAWER - GREEN THEME ===== */
 .drawer-overlay { display: none; }
 
 .drawer {
@@ -99,7 +103,7 @@ main {
     left: 0;
     bottom: 0;
     width: var(--sidebar-width);
-    background: var(--navy);
+    background: linear-gradient(180deg, var(--drawer-green) 0%, var(--drawer-green-dark) 100%);
     z-index: 300;
     display: flex;
     flex-direction: column;
@@ -108,9 +112,19 @@ main {
     transition: transform 0.3s ease;
 }
 
+body.dark-mode .drawer {
+    background: linear-gradient(180deg, var(--drawer-green) 0%, var(--drawer-green-dark) 100%);
+}
+
 .drawer-header {
-    background: rgba(0,0,0,0.2);
+    background: rgba(0,0,0,0.15);
     padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.drawer-profile {
+    display: flex;
+    flex-direction: column;
 }
 
 .drawer-avatar {
@@ -118,7 +132,7 @@ main {
     height: 52px;
     border-radius: 50%;
     background: rgba(255,255,255,0.12);
-    border: 2px solid rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.25);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -136,6 +150,10 @@ main {
     font-size: 18px;
     font-weight: 600;
     color: white;
+}
+
+.drawer-info {
+    flex: 1;
 }
 
 .drawer-name {
@@ -160,7 +178,7 @@ main {
     align-items: center;
     gap: 12px;
     padding: 12px 20px;
-    color: rgba(255,255,255,0.65);
+    color: rgba(255,255,255,0.7);
     font-size: 13px;
     background: none;
     border: none;
@@ -178,32 +196,33 @@ main {
 }
 
 .drawer-item:hover {
-    background: rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.08);
     color: #fff;
 }
 
 .drawer-item.active {
     color: #fff;
     border-left-color: var(--teal);
-    background: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.1);
+    font-weight: 500;
 }
 
 .drawer-divider {
     height: 1px;
-    background: rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.1);
     margin: 6px 20px;
 }
 
 .drawer-footer {
     padding: 16px 20px;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(255,255,255,0.1);
 }
 
 .drawer-logout {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.6);
     background: none;
     border: none;
     cursor: pointer;
@@ -265,6 +284,48 @@ main {
     width: 24px;
     height: 24px;
     stroke: currentColor;
+}
+
+/* Brand with Gordon College Logo */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo img {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    object-fit: contain;
+}
+
+.brand-name {
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.brand-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-left: 4px;
+    padding-left: 8px;
+    border-left: 1.5px solid var(--border);
+}
+
+.brand-subtitle img {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    object-fit: cover;
 }
 
 /* Dark Mode Toggle */
@@ -336,6 +397,22 @@ body.dark-mode .dark-mode-toggle .moon-icon { display: block; }
     justify-content: center;
 }
 
+/* Admin Pill */
+.admin-pill {
+    background: var(--teal);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+}
+
+body.dark-mode .admin-pill {
+    background: #0D9488;
+}
+
 /* Notification Dropdown */
 .notification-dropdown {
     position: fixed;
@@ -354,15 +431,17 @@ body.dark-mode .dark-mode-toggle .moon-icon { display: block; }
     top: 65px;
     right: 15px;
 }
+
 .notification-dropdown.show {
     opacity: 1;
     visibility: visible;
+    transform: translateY(0) scale(1);
 }
 
 @media (min-width: 769px) {
     .notification-dropdown {
         top: 70px;
-        right: 70px;  
+        right: 20px;
         transform: translateY(-10px);
     }
     .notification-dropdown.show {
@@ -464,41 +543,6 @@ body.dark-mode .dark-mode-toggle .moon-icon { display: block; }
 .notification-dropdown-empty svg {
     margin-bottom: 12px;
     opacity: 0.5;
-}
-
-/* Brand */
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.brand-logo img {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    object-fit: contain;
-}
-
-.brand-name {
-    font-size: 18px;
-    font-weight: 700;
-    background: linear-gradient(135deg, var(--teal), var(--teal-dark));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-/* Admin Pill */
-.admin-pill {
-    background: var(--blue);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 6px 16px;
-    border-radius: 30px;
-    border: none;
-    cursor: pointer;
 }
 
 /* ===== STUDENT MANAGEMENT SECTION ===== */
@@ -815,13 +859,12 @@ body.dark-mode .status-inactive {
     stroke: currentColor;
 }
 
-/* ===== ACTIVE BOTTOM NAV BUTTON - SOFT GREEN BACKGROUND ===== */
 .bottom-nav-item.active {
     color: var(--teal);
     background: var(--teal-light);
 }
 
-/* ===== MODAL - FIXED WITH PROPER DARK BACKGROUND OVERLAY ===== */
+/* ===== MODAL ===== */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -844,7 +887,6 @@ body.dark-mode .status-inactive {
     visibility: visible;
 }
 
-/* Target the modal class used in your HTML (not modal-container) */
 .modal-overlay .modal {
     background: var(--surface);
     border-radius: 28px;
@@ -1009,12 +1051,21 @@ body.dark-mode .status-inactive {
     }
     
     .brand-name {
-        font-size: 16px;
+        font-size: 15px;
     }
     
     .brand-logo img {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
+    }
+    
+    .brand-subtitle {
+        font-size: 10px;
+    }
+    
+    .brand-subtitle img {
+        width: 14px;
+        height: 14px;
     }
     
     .admin-pill {
@@ -1111,6 +1162,10 @@ body.dark-mode .status-inactive {
 
 /* Extra Small Devices */
 @media (max-width: 480px) {
+    .brand-subtitle {
+        display: none;
+    }
+    
     .stats-row {
         gap: 8px;
     }
@@ -1122,7 +1177,6 @@ body.dark-mode .status-inactive {
     .stat-icon {
         width: 32px;
         height: 32px;
-        font-size: 16px;
     }
     
     .stat-number {

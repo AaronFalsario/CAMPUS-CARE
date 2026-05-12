@@ -52,20 +52,8 @@ function saveNotifications() {
 
 // ============================================================
 // SUPABASE NOTIFICATIONS TABLE INTEGRATION
-// This is the KEY fix — admin now writes to the notifications
-// table so students can receive real-time notifications.
 // ============================================================
 
-/**
- * Inserts a notification row into Supabase notifications table.
- * The student dashboard listens to this table via Realtime and
- * fires a native browser notification when a new row appears.
- *
- * @param {string} title   - Short title shown in the notification
- * @param {string} message - Body text of the notification
- * @param {string} type    - 'info' | 'warning' | 'urgent' (matches your DB default 'info')
- * @param {string|null} relatedId - The incident UUID this notification is about
- */
 async function pushNotificationToStudents(title, message, type = 'info', relatedId = null) {
     try {
         const { error } = await supabase
@@ -77,7 +65,6 @@ async function pushNotificationToStudents(title, message, type = 'info', related
                 type: type,
                 is_read: false,
                 related_id: relatedId || null
-                // created_at and id are auto-filled by Supabase defaults
             });
 
         if (error) {
@@ -237,11 +224,6 @@ function sendMobileNotification(title, body, isUrgent = false) {
     sendBrowserNotification(title, body, isUrgent);
 }
 
-// ============================================================
-// UPDATED checkForUrgentReport
-// Now also pushes to Supabase notifications table so students
-// receive real-time native notifications via SDB.js listener.
-// ============================================================
 function checkForUrgentReport(incident) {
     console.log('🔔 Checking for urgent report:', incident);
     if (!incident) return;
@@ -253,30 +235,16 @@ function checkForUrgentReport(incident) {
     const notificationTitle = isUrgent ? '🚨 URGENT INCIDENT REPORTED' : '📋 New Incident Reported';
     const notificationBody = `${incident.name || incident.title}\n📍 Location: ${incident.location}\n⚠️ Priority: ${(incident.priority || 'medium').toUpperCase()}`;
 
-    // 1. Add to admin's local notification panel
     addInternalNotification(
         isUrgent ? '🚨 Urgent Incident' : 'New Incident',
         `${incident.name || incident.title} at ${incident.location}`,
         isUrgent
     );
 
-    // 2. Show admin-side toast
     showToastMessage(notificationBody, isUrgent ? 'urgent' : 'info');
-
-    // 3. Show admin-side browser/mobile notification
     sendMobileNotification(notificationTitle, notificationBody, isUrgent);
+    pushNotificationToStudents(notificationTitle, notificationBody, isUrgent ? 'urgent' : 'info', incident.id || null);
 
-    // 4. ✅ KEY FIX: Push to Supabase notifications table
-    //    This triggers SDB.js Realtime listener on student dashboard
-    //    which then fires showNativePushNotification() for all students.
-    pushNotificationToStudents(
-        notificationTitle,
-        notificationBody,
-        isUrgent ? 'urgent' : 'info',
-        incident.id || null
-    );
-
-    // 5. Animate bell
     if (isUrgent) {
         const bell = document.getElementById('notificationBell');
         if (bell) {
@@ -294,10 +262,6 @@ function checkForUrgentReport(incident) {
     updateNotificationBadge();
 }
 
-// ============================================================
-// ALSO push to Supabase when admin manually updates status
-// So students are notified when their report is resolved etc.
-// ============================================================
 async function notifyStudentOfStatusChange(incident, oldStatus, newStatus) {
     if (!incident) return;
 
@@ -608,10 +572,7 @@ function setupRealtimeSubscription() {
                     timestamp: new Date(payload.new.created_at),
                     is_anonymous: payload.new.is_anonymous || false
                 };
-
-                // Fire admin notification + push to Supabase for students
                 checkForUrgentReport(newIncident);
-
                 allIncidents.unshift(newIncident);
                 updateAll();
                 setTimeout(() => { updateNotificationDropdown(); updateNotificationBadge(); }, 100);
@@ -627,7 +588,6 @@ function setupRealtimeSubscription() {
                         name: payload.new.title,
                         location: payload.new.location,
                     };
-                    // Notify student of status change via Supabase
                     notifyStudentOfStatusChange(updatedIncident, payload.old.status, payload.new.status);
                     addInternalNotification(
                         'Status Updated',
@@ -668,7 +628,6 @@ function setupRealtimeSubscription() {
         });
 }
 
-// ============ POLLING FALLBACK ==========
 function startPollingFallback() {
     if (pollingInterval) return;
     let lastKnownId = allIncidents.length > 0 ? allIncidents[0].id : null;
@@ -707,7 +666,6 @@ function startPollingFallback() {
     }, 3000);
 }
 
-// ============ UPDATE STATUS ==========
 async function updateIncidentStatus(incidentId, newStatus, resolvedAt = null) {
     try {
         const updateData = { status: newStatus, updated_at: new Date().toISOString() };
@@ -733,7 +691,6 @@ function saveToLocalStorage() {
     setTimeout(() => { isSavingToStorage = false; }, 0);
 }
 
-// ============ AUTO-DELETE ==========
 async function checkAndDeleteOldResolved() {
     const now = new Date();
     const toDelete = [];
@@ -895,76 +852,194 @@ function renderMobileCards() {
     }).join('');
 }
 
+// ============ UPDATED MODAL FUNCTIONS - SMALLER FOR MOBILE ==========
 window.openModal = function(id) {
     const inc = allIncidents.find(i => String(i.id) === String(id));
     if (!inc) { showToastMessage('Incident not found', 'error'); return; }
     currentIncidentId = id;
-    const fields = {
-        modalTitle: inc.name,
-        modalLocation: inc.location,
-        modalDate: new Date(inc.timestamp).toLocaleString(),
-        modalDescription: inc.description || 'No description provided',
-        modalReporter: inc.is_anonymous === true ? 'Anonymous Reporter' : inc.reporter,
-        modalStudentId: inc.is_anonymous === true ? 'Hidden' : inc.student_id
-    };
-    Object.entries(fields).forEach(([id, val]) => { const el = document.getElementById(id); if (el) el.innerText = val; });
-    const modalCategory = document.getElementById('modalCategory');
-    const modalPriority = document.getElementById('modalPriority');
-    const modalStatus = document.getElementById('modalStatus');
-    if (modalCategory) modalCategory.innerHTML = `<span class="badge b-${inc.category}">${inc.category}</span>`;
-    if (modalPriority) modalPriority.innerHTML = `<span class="badge b-${inc.priority}">${inc.priority}</span>`;
-    if (modalStatus) modalStatus.value = inc.status;
-    const modalImage = document.getElementById('modalImage');
-    const noImageDiv = document.getElementById('noImage');
-    if (modalImage && noImageDiv) {
-        if (inc.image_url && inc.image_url !== 'null' && inc.image_url !== '') {
-            modalImage.src = inc.image_url;
-            modalImage.style.display = 'block';
-            noImageDiv.style.display = 'none';
-        } else {
-            modalImage.style.display = 'none';
-            noImageDiv.style.display = 'flex';
-            noImageDiv.style.flexDirection = 'column';
-            noImageDiv.style.alignItems = 'center';
-            noImageDiv.innerHTML = `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p>No image attached</p>`;
-        }
+    
+    // Check if modal exists, remove if it does
+    const existingModal = document.getElementById('incidentModal');
+    if (existingModal) existingModal.remove();
+    
+    const isMobile = window.innerWidth <= 768;
+    
+    // Create modal element
+    const modal = document.createElement('div');
+    modal.id = 'incidentModal';
+    modal.className = 'modal-overlay';
+    
+    // Get category display
+    const categoryLabels = { security: 'Security', maintenance: 'Maintenance', janitorial: 'Janitorial', facilities: 'Facilities' };
+    const priorityLabels = { high: 'High', medium: 'Medium', low: 'Low' };
+    const statusMap = { pending: 'Pending', 'in-progress': 'In Progress', resolved: 'Resolved' };
+    
+    // Image section
+    let imageHtml = '';
+    if (inc.image_url && inc.image_url !== 'null' && inc.image_url !== '') {
+        imageHtml = `
+            <div class="modal-image-section" style="text-align:center;margin-bottom:12px;">
+                <img src="${escape(inc.image_url)}" alt="Incident Image" style="max-width:100%;max-height:${isMobile ? '120px' : '180px'};border-radius:12px;object-fit:cover;cursor:pointer;" onclick="window.openImageZoom('${escape(inc.image_url)}')">
+            </div>
+        `;
+    } else {
+        imageHtml = `
+            <div class="modal-image-section no-image" style="text-align:center;padding:${isMobile ? '16px' : '24px'};background:var(--bg);border-radius:12px;margin-bottom:12px;">
+                <svg width="${isMobile ? '32' : '40'}" height="${isMobile ? '32' : '40'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                <p style="margin-top:8px;font-size:${isMobile ? '11px' : '12px'};color:var(--muted);">No image attached</p>
+            </div>
+        `;
     }
-    const deletionInfo = document.getElementById('modalDeletionInfo');
-    if (deletionInfo) {
-        if (inc.status === 'resolved' && inc.resolved_at) {
-            const resolvedDate = new Date(inc.resolved_at);
-            const deleteDate = new Date(resolvedDate.getTime() + (RESOLVED_RETENTION_HOURS * 60 * 60 * 1000));
-            const hoursLeft = Math.max(0, Math.floor((deleteDate - new Date()) / (1000 * 60 * 60)));
-            deletionInfo.style.display = 'flex';
-            const infoValue = deletionInfo.querySelector('.info-value');
-            if (infoValue) infoValue.innerHTML = `⚠️ Will be deleted in ${hoursLeft} hours`;
-        } else {
-            deletionInfo.style.display = 'none';
-        }
-    }
-    const modal = document.getElementById('incidentModal');
-    if (modal) { modal.classList.add('active'); document.body.style.overflow = 'hidden'; }
+    
+    modal.innerHTML = `
+        <div class="modal-container" style="
+            background: var(--surface);
+            border-radius: ${isMobile ? '16px' : '20px'};
+            width: 90%;
+            max-width: ${isMobile ? '400px' : '500px'};
+            max-height: ${isMobile ? '75vh' : '85vh'};
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 25px 50px var(--shadow-lg);
+            animation: modalSlideIn 0.3s ease;
+        ">
+            <div class="modal-header" style="
+                padding: ${isMobile ? '12px 16px' : '16px 20px'};
+                background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+                color: white;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                flex-shrink: 0;
+            ">
+                <h3 style="font-size: ${isMobile ? '15px' : '18px'}; font-weight: 700; margin: 0;">
+                    📋 Incident Details
+                </h3>
+                <button class="modal-close" onclick="closeModal()" style="
+                    background: none;
+                    border: none;
+                    font-size: ${isMobile ? '22px' : '24px'};
+                    cursor: pointer;
+                    color: white;
+                    opacity: 0.8;
+                    transition: opacity 0.2s;
+                    line-height: 1;
+                ">&times;</button>
+            </div>
+            
+            <div class="modal-body" style="
+                padding: ${isMobile ? '12px 14px' : '16px 20px'};
+                overflow-y: auto;
+                flex: 1;
+            ">
+                ${imageHtml}
+                
+                <div class="modal-info-section" style="display: flex; flex-direction: column; gap: ${isMobile ? '8px' : '12px'};">
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Title:</span>
+                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500; word-break: break-word;">${escape(inc.name)}</span>
+                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Location:</span>
+                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500; word-break: break-word;">📍 ${escape(inc.location)}</span>
+                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Category:</span>
+                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.category}" style="padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'}; font-weight: 600;">${categoryLabels[inc.category] || inc.category}</span></span>
+                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Priority:</span>
+                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.priority}" style="padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'}; font-weight: 600;">${priorityLabels[inc.priority] || inc.priority}</span></span>
+                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Status:</span>
+                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">
+                            <select id="modalStatus" class="modal-status-select" style="padding: ${isMobile ? '4px 10px' : '6px 12px'}; border: 1px solid var(--border); border-radius: 25px; font-family: inherit; font-size: ${isMobile ? '10px' : '12px'}; background: var(--surface); cursor: pointer; min-width: ${isMobile ? '100px' : '130px'}; color: var(--text);">
+                                <option value="pending" ${inc.status === 'pending' ? 'selected' : ''}>⏱️ Pending</option>
+                                <option value="in-progress" ${inc.status === 'in-progress' ? 'selected' : ''}>⚙️ In Progress</option>
+                                <option value="resolved" ${inc.status === 'resolved' ? 'selected' : ''}>✓ Resolved</option>
+                            </select>
+                        </span>
+                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Reporter:</span>
+                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</span>
+                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Student ID:</span>
+                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${inc.is_anonymous === true ? 'Hidden' : inc.student_id}</span>
+                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Date:</span>
+                        <span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">🕐 ${new Date(inc.timestamp).toLocaleString()}</span>
+                    </div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'};">
+                        <span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase; letter-spacing: 0.5px;">Description:</span>
+                        <span class="info-value description-text" style="flex: 1; color: var(--text); font-size: ${isMobile ? '10px' : '12px'}; font-weight: 500; background: var(--bg); padding: ${isMobile ? '8px 10px' : '10px 12px'}; border-radius: 10px; line-height: 1.4;">${escape(inc.description || 'No description provided')}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="
+                padding: ${isMobile ? '10px 14px' : '12px 20px'};
+                border-top: 1px solid var(--border);
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                background: var(--surface);
+                position: sticky;
+                bottom: 0;
+                flex-shrink: 0;
+            ">
+                <button class="btn-cancel" onclick="closeModal()" style="
+                    padding: ${isMobile ? '6px 16px' : '8px 20px'};
+                    background: var(--bg);
+                    border: 1px solid var(--border);
+                    border-radius: 30px;
+                    cursor: pointer;
+                    font-family: inherit;
+                    font-size: ${isMobile ? '11px' : '12px'};
+                    font-weight: 500;
+                    transition: background 0.2s;
+                    color: var(--text);
+                ">Cancel</button>
+                <button class="btn-save" onclick="saveStatus()" style="
+                    padding: ${isMobile ? '6px 16px' : '8px 20px'};
+                    background: var(--teal);
+                    color: white;
+                    border: none;
+                    border-radius: 30px;
+                    cursor: pointer;
+                    font-family: inherit;
+                    font-size: ${isMobile ? '11px' : '12px'};
+                    font-weight: 600;
+                    transition: all 0.2s;
+                ">Save Changes</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => modal.classList.add('active'), 10);
+    
+    // Add escape key listener
+    const escHandler = (e) => { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', escHandler); } };
+    document.addEventListener('keydown', escHandler);
 };
 
 window.closeModal = function() {
     const modal = document.getElementById('incidentModal');
-    if (modal) modal.classList.remove('active');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+    }
     document.body.style.overflow = '';
     currentIncidentId = null;
-};
-
-window.deleteIncident = async function(id) {
-    const incident = allIncidents.find(i => String(i.id) === String(id));
-    if (!incident) return;
-    if (!confirm(`Are you sure you want to permanently delete this incident?\n\n"${incident.name}"\n\nThis cannot be undone.`)) return;
-    const { error } = await supabase.from('incident').delete().eq('id', id);
-    if (error) { showToastMessage('❌ Failed to delete: ' + (error.message || 'Unknown error'), 'error'); return; }
-    showToastMessage('✓ Incident permanently deleted.');
-    addInternalNotification('Incident Deleted', `"${incident.name}" was deleted by an admin`, false);
-    allIncidents = allIncidents.filter(i => String(i.id) !== String(id));
-    saveToLocalStorage();
-    updateAll();
-    closeModal();
 };
 
 window.saveStatus = async function() {
@@ -986,7 +1061,6 @@ window.saveStatus = async function() {
 
         const success = await updateIncidentStatus(currentIncidentId, newStatus, resolvedAt);
         if (success) {
-            // Notify the student their report was updated
             await notifyStudentOfStatusChange(incident, oldStatus, newStatus);
             saveToLocalStorage();
             updateAll();
@@ -1000,6 +1074,31 @@ window.saveStatus = async function() {
     closeModal();
 };
 
+window.openImageZoom = function(src) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.9);
+        z-index: 30000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: zoom-out;
+        padding: 20px;
+    `;
+    overlay.innerHTML = `
+        <img src="${src}" style="max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain;">
+        <button style="position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+    `;
+    overlay.onclick = () => overlay.remove();
+    document.body.appendChild(overlay);
+};
+
+// ============ REST OF THE FUNCTIONS (getIcon, getCategoryColor, getTimeAgo, escape, setupEvents, init, etc.) ============
 function getIcon(cat) { return { security: '⚠️', maintenance: '🔧', janitorial: '🧹', facilities: '🏢' }[cat] || '📋'; }
 function getCategoryColor(cat) { return { security: '#DC2626', maintenance: '#2563EB', janitorial: '#1D9E75', facilities: '#D97706' }[cat] || '#6B7280'; }
 function getTimeAgo(date) { const h = Math.floor((Date.now() - new Date(date)) / 3600000); if (h < 1) return 'Just now'; if (h < 24) return `${h}h ago`; return `${Math.floor(h / 24)}d ago`; }
@@ -1082,6 +1181,7 @@ styleElem.textContent = `
     @keyframes slideDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
     @keyframes slideUp { from{opacity:0;transform:translateY(100%)} to{opacity:1;transform:translateY(0)} }
     @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+    @keyframes modalSlideIn { from{transform:scale(0.95);opacity:0} to{transform:scale(1);opacity:1} }
 `;
 document.head.appendChild(styleElem);
 
@@ -1106,7 +1206,6 @@ async function init() {
 
     setTimeout(() => { updateAll(); }, 500);
 
-    // Request permission after a short delay
     setTimeout(() => { requestNotificationPermission(); }, 2000);
 
     window.addEventListener('storage', (e) => {
