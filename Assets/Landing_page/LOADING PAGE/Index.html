@@ -86,10 +86,7 @@
     </div>
 
     <script>
-        // ===========================================
-        // DEVICE DETECTION & REDIRECT
-        // ===========================================
-        
+        // Function to detect mobile device
         function isMobileDevice() {
             const userAgent = navigator.userAgent.toLowerCase();
             const mobileKeywords = /android|webos|iphone|ipad|ipod|blackberry|windows phone|opera mini|iemobile|mobile/i;
@@ -97,16 +94,23 @@
             return mobileKeywords.test(userAgent) || isSmallScreen;
         }
         
+        // Get redirect target from sessionStorage or use default
+        const getRedirectTarget = () => {
+            const stored = sessionStorage.getItem('redirectAfterLoad');
+            if (stored) {
+                sessionStorage.removeItem('redirectAfterLoad');
+                return stored;
+            }
+            return '/land.html';
+        };
+        
         const isMobile = isMobileDevice();
         
-        // DESKTOP: Redirect to landing page immediately
         if (!isMobile) {
-            window.location.replace('/Assets/Landing_page/land.html');
-            // Stop all code execution for desktop
-        } 
-        // MOBILE: Run animation then redirect
-        else {
-            // Wait for DOM to be ready
+            // Desktop users go directly to land.html
+            window.location.replace('/land.html');
+        } else {
+            // MOBILE: Run animation then redirect
             document.addEventListener('DOMContentLoaded', function() {
                 const circle = document.getElementById('circle');
                 const bgFill = document.getElementById('bgFill');
@@ -114,6 +118,8 @@
 
                 if (!circle || !bgFill || !content) {
                     console.error('Elements not found');
+                    // Fallback redirect
+                    window.location.href = getRedirectTarget();
                     return;
                 }
 
@@ -135,7 +141,7 @@
                     const f = frames[currentFrame];
 
                     if (currentFrame === frames.length - 1) {
-                        // Last frame - fade out and redirect to mobile dashboard
+                        // Last frame - fade out and redirect
                         circle.style.transition = 'transform 0.28s ease-in, opacity 0.28s ease-in';
                         circle.style.opacity = '0';
                         circle.style.transform = 'translate(-50%, -50%) scale(0)';
@@ -145,9 +151,10 @@
                             setTimeout(() => {
                                 content.style.opacity = '1';
                                 setTimeout(() => {
-                                    // MOBILE: Redirect to mobile dashboard (change this to your actual mobile page)
-                                    window.location.href = '/Assets/Mobile_dashboard/mobile.html';
-                                }, 4000);
+                                    // MOBILE: Redirect to mobile dashboard
+                                    const redirectUrl = getRedirectTarget();
+                                    window.location.href = redirectUrl;
+                                }, 800);
                             }, 200);
                         }, 180);
                         return;

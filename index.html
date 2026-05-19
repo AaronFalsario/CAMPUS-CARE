@@ -5,7 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus Care</title>
     <script>
-        window.location.href = '/land.html';
+        // Detect if user is on mobile device
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        }
+
+        // Where to go after loading
+        const targetPage = '/land.html';
+        const mobileDashboard = '/land.html';
+        
+        if (isMobile()) {
+            // Store where to go after loading animation
+            sessionStorage.setItem('redirectAfterLoad', mobileDashboard);
+            // Redirect to mobile loading page (corrected path)
+            window.location.href = '/Assets/landing_page/LOADING PAGE/index.html';
+        } else {
+            // Desktop users go directly to land.html
+            window.location.href = targetPage;
+        }
     </script>
 </head>
 <body>
