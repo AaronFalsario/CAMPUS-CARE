@@ -13,6 +13,26 @@ const loginBtn = document.getElementById('loginBtn');
 const signupBtn = document.getElementById('signupBtn');
 const loaderOverlay = document.getElementById('loaderOverlay');
 
+// ========== TERMS MODAL TRIGGER ==========
+function setupTermsModal() {
+    const termsBtn = document.getElementById('termsBtn');
+    const modal = document.getElementById('term');
+    const closeBtn = modal?.querySelector('.terms-close-btn');
+    const overlay = modal?.querySelector('.terms-modal-overlay');
+    
+    function openModal() {
+        if (modal) modal.style.display = 'flex';
+    }
+    
+    function closeModal() {
+        if (modal) modal.style.display = 'none';
+    }
+    
+    if (termsBtn) termsBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (overlay) overlay.addEventListener('click', closeModal);
+}
+
 // ========== EMAIL VALIDATION ==========
 function isValidGordonEmail(email) {
     if (!email) return false;
@@ -792,6 +812,7 @@ function init() {
     addStyles();
     setupLoginInput();
     setupSignupEmailInput();
+    setupTermsModal();  // ADDED: Terms modal trigger
     checkExistingSession();
     console.log('✅ Login page ready - Auto append domain for both login and signup');
 }

@@ -29,7 +29,6 @@ body {
     padding: 24px 16px;
     overflow-x: hidden;
     position: relative;
-    
 }
 
 body::before {
@@ -385,6 +384,26 @@ footer p {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
+/* Terms Link Button */
+.term {
+    text-align: center;
+    margin-top: 12px;
+}
+
+.terms-link-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.terms-link-btn:hover {
+    color: white;
+}
+
 @keyframes slideUp {
     from { opacity: 0; transform: translateY(24px); }
     to { opacity: 1; transform: translateY(0); }
@@ -406,7 +425,282 @@ footer p {
     background-color: #fef2f2 !important;
 }
 
-/* ========== IMPROVED RESPONSIVE STYLES FOR BETTER READABILITY ========== */
+/* ========== TERMS OF USE MODAL ========== */
+.terms-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 30000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: termsFadeIn 0.3s ease;
+}
+
+.terms-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+}
+
+.terms-modal-container {
+    position: relative;
+    background: white;
+    border-radius: 24px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 85vh;
+    overflow: hidden;
+    animation: termsSlideUp 0.3s ease;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.terms-modal-header {
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #1a56db 0%, #2563eb 100%);
+    color: white;
+}
+
+.terms-modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+}
+
+.terms-modal-header p {
+    margin: 8px 0 0 0;
+    font-size: 13px;
+    opacity: 0.9;
+    text-align: left;
+}
+
+.terms-modal-body {
+    padding: 20px 24px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.terms-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.terms-section {
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.terms-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.terms-section h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 8px;
+}
+
+.terms-section p {
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+.terms-modal-footer {
+    padding: 16px 24px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    justify-content: center;
+}
+
+.terms-close-btn {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #1a56db 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.terms-close-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Add this to your CSS file - Bullet points for Terms modal */
+.terms-section ul {
+    margin-left: 20px;
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 13px;
+    line-height: 1.6;
+    list-style-type: disc;
+}
+
+.terms-section li {
+    margin-bottom: 4px;
+}
+
+/* Dark mode for lists */
+body.dark-mode .terms-section ul {
+    color: #94a3b8;
+}
+
+body.dark-mode .terms-section li {
+    color: #94a3b8;
+}
+
+/* ========== MOBILE MODAL - COMPACT VERSION ========== */
+@media (max-width: 480px) {
+    .terms-modal-container {
+        width: 92%;
+        max-width: none;
+        border-radius: 20px;
+    }
+    
+    .terms-modal-header {
+        padding: 14px 18px;
+    }
+    
+    .terms-modal-header h2 {
+        font-size: 16px;
+        gap: 8px;
+    }
+    
+    .terms-modal-header h2 i {
+        font-size: 18px;
+    }
+    
+    .terms-modal-header p {
+        font-size: 11px;
+        margin-top: 5px;
+    }
+    
+    .terms-modal-body {
+        padding: 14px 18px;
+        max-height: 45vh;
+    }
+    
+    .terms-scroll {
+        gap: 12px;
+    }
+    
+    .terms-section {
+        padding-bottom: 10px;
+    }
+    
+    .terms-section h3 {
+        font-size: 13px;
+        margin-bottom: 6px;
+    }
+    
+    .terms-section p {
+        font-size: 11px;
+        line-height: 1.4;
+    }
+    
+    .terms-modal-footer {
+        padding: 12px 18px 16px;
+    }
+    
+    .terms-close-btn {
+        padding: 8px 20px;
+        font-size: 12px;
+    }
+}
+
+/* ========== VERY SMALL MOBILE (380px and below) ========== */
+@media (max-width: 380px) {
+    .terms-modal-container {
+        width: 95%;
+        border-radius: 18px;
+    }
+    
+    .terms-modal-header {
+        padding: 12px 16px;
+    }
+    
+    .terms-modal-header h2 {
+        font-size: 15px;
+    }
+    
+    .terms-modal-header p {
+        font-size: 10px;
+    }
+    
+    .terms-modal-body {
+        padding: 12px 16px;
+        max-height: 40vh;
+    }
+    
+    .terms-scroll {
+        gap: 10px;
+    }
+    
+    .terms-section h3 {
+        font-size: 12px;
+    }
+    
+    .terms-section p {
+        font-size: 10px;
+    }
+    
+    .terms-modal-footer {
+        padding: 10px 16px 14px;
+    }
+    
+    .terms-close-btn {
+        padding: 7px 16px;
+        font-size: 11px;
+    }
+}
+
+/* ========== LANDSCAPE MODE FOR MOBILE ========== */
+@media (max-height: 550px) and (orientation: landscape) {
+    .terms-modal-container {
+        max-height: 90vh;
+    }
+    
+    .terms-modal-body {
+        max-height: 35vh;
+    }
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes termsFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes termsSlideUp {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* ========== RESPONSIVE STYLES ========== */
 
 /* Desktop and larger screens (769px and above) */
 @media (min-width: 769px) {
@@ -633,7 +927,6 @@ footer p {
         font-size: 10px;
     }
     
-    /* Signup form responsive */
     #signupForm {
         padding: 18px 20px;
     }
@@ -872,5 +1165,362 @@ footer p {
     
     #signupForm {
         padding: 14px 20px;
+    }
+}
+
+/* Add these styles at the END of your CSS file */
+
+/* ========== FIXED: TERMS OF USE MODAL WITH BETTER READABILITY ========== */
+.terms-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 30000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: termsFadeIn 0.3s ease;
+}
+
+.terms-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85); /* Darker overlay for better contrast */
+    backdrop-filter: blur(8px);
+}
+
+.terms-modal-container {
+    position: relative;
+    background: #ffffff; /* Solid white background */
+    border-radius: 24px;
+    width: 90%;
+    max-width: 550px;
+    max-height: 85vh;
+    overflow: hidden;
+    animation: termsSlideUp 0.3s ease;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Darker header for better contrast */
+.terms-modal-header {
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #1e40af 0%, #1e3a5f 100%);
+    color: white;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.terms-modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    color: white;
+}
+
+.terms-modal-header h2 i {
+    font-size: 28px;
+    color: #fbbf24;
+}
+
+.terms-modal-header p {
+    margin: 10px 0 0 0;
+    font-size: 14px;
+    opacity: 0.85;
+    text-align: left;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Modal body with better scrolling and readability */
+.terms-modal-body {
+    padding: 24px 28px;
+    max-height: 55vh;
+    overflow-y: auto;
+    background: #ffffff;
+}
+
+/* Custom scrollbar for modal body */
+.terms-modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.terms-modal-body::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+
+.terms-modal-body::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+    border-radius: 10px;
+}
+
+.terms-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.terms-section {
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.terms-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.terms-section h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.terms-section h3::before {
+    content: "📌";
+    font-size: 16px;
+}
+
+.terms-section p {
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.6;
+}
+
+/* Bullet points for lists - FIXED */
+.terms-section ul {
+    margin-left: 24px;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.7;
+    list-style-type: disc;
+}
+
+.terms-section li {
+    margin-bottom: 6px;
+}
+
+.terms-section li::marker {
+    color: #3b82f6;
+}
+
+/* Footer with close button */
+.terms-modal-footer {
+    padding: 20px 28px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.terms-close-btn {
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    border-radius: 40px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 140px;
+}
+
+.terms-close-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+}
+
+.terms-close-btn:active {
+    transform: translateY(0);
+}
+
+/* ========== MOBILE MODAL - COMPACT VERSION ========== */
+@media (max-width: 600px) {
+    .terms-modal-container {
+        width: 92%;
+        max-width: none;
+        border-radius: 20px;
+    }
+    
+    .terms-modal-header {
+        padding: 18px 20px;
+    }
+    
+    .terms-modal-header h2 {
+        font-size: 18px;
+        gap: 8px;
+    }
+    
+    .terms-modal-header h2 i {
+        font-size: 22px;
+    }
+    
+    .terms-modal-header p {
+        font-size: 12px;
+        margin-top: 6px;
+    }
+    
+    .terms-modal-body {
+        padding: 18px 20px;
+        max-height: 50vh;
+    }
+    
+    .terms-scroll {
+        gap: 16px;
+    }
+    
+    .terms-section {
+        padding-bottom: 12px;
+    }
+    
+    .terms-section h3 {
+        font-size: 16px;
+        margin-bottom: 8px;
+    }
+    
+    .terms-section p {
+        font-size: 13px;
+    }
+    
+    .terms-section ul {
+        margin-left: 20px;
+        font-size: 13px;
+    }
+    
+    .terms-modal-footer {
+        padding: 16px 20px;
+    }
+    
+    .terms-close-btn {
+        padding: 10px 24px;
+        font-size: 14px;
+        min-width: 120px;
+    }
+}
+
+/* ========== DARK MODE SUPPORT ========== */
+body.dark-mode .terms-modal-container {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+body.dark-mode .terms-modal-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+}
+
+body.dark-mode .terms-modal-body {
+    background: #1e293b;
+}
+
+body.dark-mode .terms-modal-body::-webkit-scrollbar-track {
+    background: #334155;
+}
+
+body.dark-mode .terms-modal-body::-webkit-scrollbar-thumb {
+    background: #3b82f6;
+}
+
+body.dark-mode .terms-section {
+    border-bottom-color: #334155;
+}
+
+body.dark-mode .terms-section h3 {
+    color: #f1f5f9;
+}
+
+body.dark-mode .terms-section p {
+    color: #cbd5e1;
+}
+
+body.dark-mode .terms-section ul {
+    color: #cbd5e1;
+}
+
+body.dark-mode .terms-modal-footer {
+    background: #0f172a;
+    border-top-color: #334155;
+}
+
+/* ========== VERY SMALL MOBILE ========== */
+@media (max-width: 380px) {
+    .terms-modal-container {
+        width: 96%;
+        border-radius: 18px;
+    }
+    
+    .terms-modal-header {
+        padding: 14px 16px;
+    }
+    
+    .terms-modal-header h2 {
+        font-size: 16px;
+    }
+    
+    .terms-modal-body {
+        padding: 14px 16px;
+        max-height: 45vh;
+    }
+    
+    .terms-section h3 {
+        font-size: 14px;
+    }
+    
+    .terms-section p {
+        font-size: 12px;
+    }
+    
+    .terms-section ul {
+        font-size: 12px;
+        margin-left: 16px;
+    }
+    
+    .terms-close-btn {
+        padding: 8px 20px;
+        font-size: 13px;
+    }
+}
+
+/* ========== LANDSCAPE MODE ========== */
+@media (max-height: 600px) and (orientation: landscape) {
+    .terms-modal-container {
+        max-height: 92vh;
+    }
+    
+    .terms-modal-body {
+        max-height: 45vh;
+    }
+}
+
+/* ========== ANIMATIONS ========== */
+@keyframes termsFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes termsSlideUp {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
     }
 }

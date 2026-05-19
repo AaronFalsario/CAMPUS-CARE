@@ -74,6 +74,18 @@
             font-weight: 400;
             letter-spacing: 0.3px;
         }
+
+        .loading-dots {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 12px;
+            z-index: 3;
+            opacity: 0.8;
+            letter-spacing: 2px;
+        }
     </style>
 </head>
 <body>
@@ -84,6 +96,7 @@
         <span>CampusCare</span>
         <p class="tagline">Making Campus Safer Together</p>
     </div>
+    <div class="loading-dots" id="loadingDots">Loading<span>...</span></div>
 
     <script>
         const getRedirectTarget = () => {
@@ -95,18 +108,27 @@
             return '/land.html';
         };
         
+        // Animate loading dots
+        let dotCount = 0;
+        const dotsElement = document.querySelector('#loadingDots span');
+        const dotInterval = setInterval(() => {
+            dotCount = (dotCount + 1) % 4;
+            if (dotsElement) dotsElement.textContent = '.'.repeat(dotCount);
+        }, 400);
+        
         document.addEventListener('DOMContentLoaded', function() {
             const circle = document.getElementById('circle');
             const bgFill = document.getElementById('bgFill');
             const content = document.getElementById('splashContent');
 
+            // EXTENDED animation frames for longer loading (total ~8 seconds)
             const frames = [
-                { scale: 0,   duration: 50 },  
-                { scale: 1,   duration: 650 },   
-                { scale: 2.5, duration: 880 },  
-                { scale: 5,   duration: 990 },   
-                { scale: 1,   duration: 320 },  
-                { scale: 0,   duration: 1550 },   
+                { scale: 0,   duration: 200 },   // Start - longer pause
+                { scale: 1,   duration: 1000 },  // Grow to normal - slower
+                { scale: 2.5, duration: 1200 },  // Expand - slower
+                { scale: 5,   duration: 1500 },  // Maximum expansion - much slower
+                { scale: 1,   duration: 800 },   // Shrink back - slower
+                { scale: 0,   duration: 2500 },  // Fade out - very slow
             ];
 
             let currentFrame = -1;
@@ -118,7 +140,8 @@
                 const f = frames[currentFrame];
 
                 if (currentFrame === frames.length - 1) {
-                    circle.style.transition = 'transform 0.28s ease-in, opacity 0.28s ease-in';
+                    // Last frame - fade out and redirect
+                    circle.style.transition = 'transform 0.6s ease-in, opacity 0.6s ease-in';
                     circle.style.opacity = '0';
                     circle.style.transform = 'translate(-50%, -50%) scale(0)';
 
@@ -127,20 +150,22 @@
                         setTimeout(() => {
                             content.style.opacity = '1';
                             setTimeout(() => {
+                                clearInterval(dotInterval);
                                 window.location.href = getRedirectTarget();
-                            }, 800);
-                        }, 200);
-                    }, 180);
+                            }, 1000); // Extra delay before redirect
+                        }, 300);
+                    }, 250);
                     return;
                 }
 
                 circle.style.transition = `transform ${f.duration}ms cubic-bezier(0.34, 1.4, 0.64, 1)`;
                 circle.style.transform = `translate(-50%, -50%) scale(${f.scale})`;
 
-                setTimeout(runFrame, f.duration + 60);
+                setTimeout(runFrame, f.duration + 80);
             }
             
-            setTimeout(runFrame, 100);
+            // Start animation after initial delay
+            setTimeout(runFrame, 200);
         });
     </script>
 </body>
