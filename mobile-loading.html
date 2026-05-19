@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>CampusCare - Mobile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" href="/Assets/Images/logo.png" type="image/png">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%; 
+            height: 100%;
+            overflow: hidden;
+            background: white;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Sora', sans-serif;
+        }
+
+        .bg-fill {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg, #1a56db 0%, #2563eb 100%);
+            opacity: 0;     
+            z-index: 0;
+            transition: opacity 0.35s ease;
+        }
+
+        .circle {
+            position: fixed;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a56db 0%, #3b82f6 100%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            z-index: 1;
+            transition: transform 0.60s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .splash-content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            opacity: 0;
+            text-align: center;
+            transition: opacity 0.4s ease;
+        }
+
+        .splash-content span {
+            font-size: 28px;
+            font-weight: 800;
+            color: white;
+            letter-spacing: -0.5px;
+        }
+
+        .splash-content .tagline {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.75);
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-fill" id="bgFill"></div>
+    <div class="circle" id="circle"></div>
+    <div class="splash-content" id="splashContent">
+        <span>CampusCare</span>
+        <p class="tagline">Making Campus Safer Together</p>
+    </div>
+
+    <script>
+        const getRedirectTarget = () => {
+            const stored = sessionStorage.getItem('redirectAfterLoad');
+            if (stored) {
+                sessionStorage.removeItem('redirectAfterLoad');
+                return stored;
+            }
+            return '/land.html';
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const circle = document.getElementById('circle');
+            const bgFill = document.getElementById('bgFill');
+            const content = document.getElementById('splashContent');
+
+            const frames = [
+                { scale: 0,   duration: 50 },  
+                { scale: 1,   duration: 650 },   
+                { scale: 2.5, duration: 880 },  
+                { scale: 5,   duration: 990 },   
+                { scale: 1,   duration: 320 },  
+                { scale: 0,   duration: 1550 },   
+            ];
+
+            let currentFrame = -1;
+
+            function runFrame() {
+                currentFrame++;
+                if (currentFrame >= frames.length) return;
+
+                const f = frames[currentFrame];
+
+                if (currentFrame === frames.length - 1) {
+                    circle.style.transition = 'transform 0.28s ease-in, opacity 0.28s ease-in';
+                    circle.style.opacity = '0';
+                    circle.style.transform = 'translate(-50%, -50%) scale(0)';
+
+                    setTimeout(() => {
+                        bgFill.style.opacity = '1';
+                        setTimeout(() => {
+                            content.style.opacity = '1';
+                            setTimeout(() => {
+                                window.location.href = getRedirectTarget();
+                            }, 800);
+                        }, 200);
+                    }, 180);
+                    return;
+                }
+
+                circle.style.transition = `transform ${f.duration}ms cubic-bezier(0.34, 1.4, 0.64, 1)`;
+                circle.style.transform = `translate(-50%, -50%) scale(${f.scale})`;
+
+                setTimeout(runFrame, f.duration + 60);
+            }
+            
+            setTimeout(runFrame, 100);
+        });
+    </script>
+</body>
+</html>

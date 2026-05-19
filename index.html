@@ -9,18 +9,15 @@
             return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
         }
 
-        const targetPage = '/land.html';
-        const mobileDashboard = '/land.html';
-        
         if (isMobile()) {
-            sessionStorage.setItem('redirectAfterLoad', mobileDashboard);
-            window.location.href = '/Assets/landing_page/loading-page/index.html';
+            sessionStorage.setItem('redirectAfterLoad', '/land.html');
+            window.location.href = '/mobile-loading.html';
         } else {
-            window.location.href = targetPage;
+            window.location.href = '/land.html';
         }
     </script>
 </head>
 <body>
-    Redirecting to Campus Care...
+    Redirecting...
 </body>
 </html>

@@ -35,7 +35,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        loading: resolve(__dirname, 'Assets/landing_page/loading-page/index.html'),
+        mobileLoading: resolve(__dirname, 'mobile-loading.html'),
         landing: resolve(__dirname, 'land.html'),
         studentDashboard: resolve(__dirname, 'Assets/Student_dashboard/SDB.html'),
         adminDashboard: resolve(__dirname, 'Assets/Admin_dashboard/Admin.html'),
