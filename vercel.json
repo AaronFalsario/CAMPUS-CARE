@@ -5,10 +5,6 @@
   "installCommand": "npm install",
   "rewrites": [
     {
-      "source": "/",
-      "destination": "/index.html"
-    },
-    {
       "source": "/land",
       "destination": "/land.html"
     },
@@ -51,6 +47,14 @@
     {
       "source": "/student/settings",
       "destination": "/Assets/Student_dashboard/setting/setting.html"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/Assets/login/password_admin/reset_password.html"
+    },
+    {
+      "source": "/assets/landing_page/LOADING%20PAGE/index.html",
+      "destination": "/Assets/landing_page/LOADING PAGE/index.html"
     },
     {
       "source": "/(.*)",
