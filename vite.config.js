@@ -3,12 +3,10 @@ import { resolve } from 'path'
 import { copyFileSync, mkdirSync, existsSync } from 'fs'
 import { dirname } from 'path'
 
-// Custom plugin to copy static files
 function copyStaticFiles() {
   return {
     name: 'copy-static-files',
     writeBundle() {
-      // List of files to copy from root to dist
       const filesToCopy = [
         { src: 'bottom-nav.js', dest: 'dist/bottom-nav.js' },
       ];
@@ -37,6 +35,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
+        // REMOVED the leading slash - it was the problem
         loading: resolve(__dirname, 'Assets/landing_page/LOADING PAGE/index.html'),
         landing: resolve(__dirname, 'land.html'),
         studentDashboard: resolve(__dirname, 'Assets/Student_dashboard/SDB.html'),
