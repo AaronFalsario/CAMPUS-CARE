@@ -8,26 +8,6 @@
     <link rel="icon" href="/Assets/Images/logo.png" type="image/png">
     <link rel="stylesheet" href="/Assets/login/log.css">
     <base href="/">
-    <style>
-        .terms-link-btn {
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 12px;
-            cursor: pointer;
-            text-decoration: underline;
-            transition: color 0.2s;
-            margin-top: 12px;
-            display: inline-block;
-        }
-        .terms-link-btn:hover {
-            color: white;
-        }
-        .footer-links {
-            text-align: center;
-            margin-top: 16px;
-        }
-    </style>
 </head>
 <body>
 
@@ -40,17 +20,17 @@
         <p>Report and manage campus issues efficiently</p>
     </div>
 
-    <!-- Student Login Card -->
+    <!-- Student Login Card Only - No Sign Up Form -->
     <div class="login-card" id="studentLoginCard">
         <div class="user-icon"><i class="fas fa-user-pen"></i></div>
         <h2>Student Login</h2>
         <p>Welcome back! Please login to continue</p>
 
         <div class="input-group">
-            <label>Student ID / Email</label>
+            <label>Student ID</label>
             <div class="input-icon">
                 <i class="fas fa-id-card"></i>
-                <input type="text" id="loginEmail" placeholder="Enter your Student ID or Email">
+                <input type="text" id="loginEmail" placeholder="Enter your Student ID">
             </div>
         </div>
 
@@ -64,135 +44,58 @@
         </div>
 
         <button class="login-btn" id="loginBtn">Login</button>
-        <p class="signup-text">Don't have an account?</p>
-        <button type="button" class="signup-btn" id="showSignup">Sign up</button>
         <button type="button" class="Forgot-password" id="showForgotPassword">Forgot Password?</button>
     </div>
 
-    <!-- Student Sign Up Form -->
-    <div class="login-card" id="signupForm" style="display: none;">
-        <div class="user-icon"><i class="fas fa-user-plus"></i></div>
-        <h2>Student Sign Up</h2>
-        <p>Create your student account</p>
-
-        <div class="input-group">
-            <label>Full Name</label>
-            <div class="input-icon">
-                <i class="fas fa-user"></i>
-                <input type="text" id="signupName" placeholder="e.g., Juan Dela Cruz">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label>Student ID</label>
-            <div class="input-icon">
-                <i class="fas fa-hashtag"></i>
-                <input type="text" id="signupStudentId" placeholder="Enter your student ID">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label>Email Address</label>
-            <div class="input-icon">
-                <i class="fas fa-envelope"></i>
-                <input type="text" id="signupEmail" placeholder="e.g 2021-32132">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <label>Password</label>
-            <div class="input-icon password-container">
-                <i class="fas fa-lock"></i>
-                <input type="password" id="signupPassword" placeholder="Enter password (min. 6 characters)">
-                <i class="fas fa-eye toggle-password" id="toggleSignupPassword" style="left: auto; right: 12px; cursor: pointer;"></i>
-            </div>
-        </div>
-
-        <button class="login-btn" id="signupBtn">Sign Up</button>
-        <p class="signup-text">Already have an account?</p>
-        <button type="button" id="showLogin" class="signup-btn">Login</button>
+    <div class="loader-overlay" id="loaderOverlay">
+        <div class="spinner"></div>
     </div>
-</div>
 
-<div class="loader-overlay" id="loaderOverlay">
-    <div class="spinner"></div>
-</div>
-
-<!-- Terms of Use Modal with ID "term" -->
-<div id="term" class="terms-modal" style="display: none;">
-    <div class="terms-modal-overlay"></div>
-    <div class="terms-modal-container">
-        <div class="terms-modal-header">
-            <h2><i class="fas fa-gavel"></i> Terms of Use</h2>
-            <p>Please read the terms carefully</p>
-        </div>
-        <div class="terms-modal-body">
-            <div class="terms-scroll">
-                <div class="terms-section">
-                    <h3>1. Acceptance of Terms</h3>
-                    <p>By using CampusCare, you agree to comply with these terms. If you do not agree, please do not use the system.</p>
-                </div>
-                
-                <div class="terms-section">
-                    <h3>2. User Responsibilities</h3>
-                    <p>You are responsible for providing accurate information, maintaining account security, and using the system appropriately for reporting and managing campus issues. Any false or misleading information may result in account suspension.</p>
-                </div>
-                
-                <div class="terms-section">
-                    <h3>3. Data Privacy</h3>
-                    <p>Your personal information is protected according to our Privacy Policy. We collect only necessary data (name, student ID, email) to provide our services. We do not share your data with third parties without your consent.</p>
-                </div>
-                
-                <div class="terms-section">
-                    <h3>4. Account Security</h3>
-                    <p>You are responsible for maintaining the confidentiality of your password and for all activities that occur under your account. Notify us immediately of any unauthorized use.</p>
-                </div>
-                
-                <div class="terms-section">
-                    <h3>5. Prohibited Activities</h3>
-                    <p>You may not:</p>
-                    <ul>
-                        <li>Misuse the system or submit false reports</li>
-                        <li>Attempt to gain unauthorized access to other accounts</li>
-                        <li>Use the system for any illegal activities</li>
-                        <li>Harass or bully other users</li>
-                        <li>Share inappropriate or offensive content</li>
-                    </ul>
-                </div>
-                
-                <div class="terms-section">
-                    <h3>6. Reporting Issues</h3>
-                    <p>When reporting campus issues, you must provide accurate and truthful information. False reports may result in disciplinary action.</p>
-                </div>
-                
-                <div class="terms-section">
-                    <h3>7. Termination</h3>
-                    <p>We reserve the right to suspend or terminate accounts that violate these terms or misuse the system. You may delete your account at any time by contacting support.</p>
-                </div>
-                
-                <div class="terms-section">
-                    <h3>8. Changes to Terms</h3>
-                    <p>We may update these terms from time to time. Continued use of the system after changes constitutes acceptance of the new terms.</p>
-                </div>
-                
-                <div class="terms-section">
-                    <h3>9. Contact Information</h3>
-                    <p>For questions about these terms, please contact: <strong>campuscare858@gmail.com</strong></p>
+    <!-- Terms of Use Modal -->
+    <div id="term" class="terms-modal" style="display: none;">
+        <div class="terms-modal-overlay"></div>
+        <div class="terms-modal-container">
+            <div class="terms-modal-header">
+                <h2><i class="fas fa-gavel"></i> Terms of Use</h2>
+                <p>Please read the terms carefully</p>
+            </div>
+            <div class="terms-modal-body">
+                <div class="terms-scroll">
+                    <div class="terms-section">
+                        <h3>1. Acceptance of Terms</h3>
+                        <p>By using CampusCare, you agree to comply with these terms. If you do not agree, please do not use the system.</p>
+                    </div>
+                    <div class="terms-section">
+                        <h3>2. User Responsibilities</h3>
+                        <p>You are responsible for providing accurate information, maintaining account security, and using the system appropriately for reporting and managing campus issues.</p>
+                    </div>
+                    <div class="terms-section">
+                        <h3>3. Data Privacy</h3>
+                        <p>Your personal information is protected according to our Privacy Policy.</p>
+                    </div>
+                    <div class="terms-section">
+                        <h3>4. Account Security</h3>
+                        <p>You are responsible for maintaining the confidentiality of your password.</p>
+                    </div>
+                    <div class="terms-section">
+                        <h3>5. Contact Information</h3>
+                        <p>For questions, please contact: <strong>campuscare858@gmail.com</strong></p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="terms-modal-footer">
-            <button class="terms-close-btn">I Understand</button>
+            <div class="terms-modal-footer">
+                <button class="terms-close-btn">I Understand</button>
+            </div>
         </div>
     </div>
-</div>
 
-<footer>
-    <div class="footer-links">
-        <button type="button" id="termsBtn" class="terms-link-btn">📜 Terms of Use</button>
-    </div>
-    <p>&copy; 2025 CampusCare. All rights reserved.</p>
-</footer>
+    <footer>
+        <div class="footer-links">
+            <button type="button" id="termsBtn" class="terms-link-btn">📜 Terms of Use</button>
+        </div>
+        <p>&copy; 2025 CampusCare. All rights reserved.</p>
+    </footer>
+</div>
 
 <script type="module" src="/Assets/login/log.js"></script>
 </body>

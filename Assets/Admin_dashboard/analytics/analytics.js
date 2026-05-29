@@ -352,7 +352,7 @@ function updateChartColorsForDarkMode(isDark) {
         categoryChart.update();
     }
     
-    // Update priority chart (bar)
+    // Update resolution time chart (bar)
     if (priorityChart) {
         if (priorityChart.options.scales?.y?.ticks) {
             priorityChart.options.scales.y.ticks.color = mutedColor;
@@ -362,6 +362,9 @@ function updateChartColorsForDarkMode(isDark) {
         }
         if (priorityChart.options.scales?.y?.grid) {
             priorityChart.options.scales.y.grid.color = gridColor;
+        }
+        if (priorityChart.options.scales?.y?.title) {
+            priorityChart.options.scales.y.title.color = mutedColor;
         }
         priorityChart.update();
     }
@@ -414,15 +417,11 @@ function updateStats() {
 
 function updateCharts() {
     const categories = { security: 0, maintenance: 0, janitorial: 0, facilities: 0 };
-    const priorities = { high: 0, medium: 0, low: 0 };
     const statuses = { pending: 0, 'in-progress': 0, resolved: 0 };
     
     allIncidents.forEach(inc => {
         const cat = inc.category || 'maintenance';
         if (categories[cat] !== undefined) categories[cat]++;
-        
-        const pri = inc.priority || 'medium';
-        if (priorities[pri] !== undefined) priorities[pri]++;
         
         const stat = inc.status || 'pending';
         if (statuses[stat] !== undefined) statuses[stat]++;
@@ -534,18 +533,37 @@ function updateCharts() {
             }
         });
     }
-    
-    // Create priority chart (bar)
+
+    // ========== RESOLUTION TIME CHART (replaces Priority Distribution) ==========
+    // Calculate average days to resolve per category
+    const resolutionByCategory = { security: [], maintenance: [], janitorial: [], facilities: [] };
+    allIncidents.forEach(inc => {
+        if (inc.status === 'resolved' && inc.resolved_at && inc.timestamp) {
+            const cat = inc.category || 'maintenance';
+            if (resolutionByCategory[cat] !== undefined) {
+                const diffMs = new Date(inc.resolved_at) - new Date(inc.timestamp);
+                const diffDays = Math.max(0, diffMs / (1000 * 60 * 60 * 24));
+                resolutionByCategory[cat].push(diffDays);
+            }
+        }
+    });
+    const avgResolution = ['security', 'maintenance', 'janitorial', 'facilities'].map(cat => {
+        const times = resolutionByCategory[cat];
+        return times.length
+            ? parseFloat((times.reduce((a, b) => a + b, 0) / times.length).toFixed(1))
+            : 0;
+    });
+
     const ctxPriority = document.getElementById('priorityChart');
     if (ctxPriority) {
         priorityChart = new Chart(ctxPriority.getContext('2d'), {
             type: 'bar',
             data: { 
-                labels: ['High', 'Medium', 'Low'], 
+                labels: ['Security', 'Maintenance', 'Janitorial', 'Facilities'], 
                 datasets: [{ 
-                    label: 'Count', 
-                    data: [priorities.high, priorities.medium, priorities.low], 
-                    backgroundColor: ['#DC2626', '#D97706', '#1D9E75'], 
+                    label: 'Avg Days to Resolve', 
+                    data: avgResolution, 
+                    backgroundColor: ['#DC2626', '#2563EB', '#1D9E75', '#D97706'], 
                     borderRadius: 8,
                     borderColor: isDark ? '#1E293B' : '#FFFFFF',
                     borderWidth: 1
@@ -559,13 +577,22 @@ function updateCharts() {
                     tooltip: {
                         backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
                         titleColor: textColor,
-                        bodyColor: mutedColor
+                        bodyColor: mutedColor,
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed.y} days avg`
+                        }
                     }
                 },
                 scales: {
                     y: {
-                        ticks: { color: mutedColor, stepSize: 1 },
-                        grid: { color: gridColor }
+                        ticks: { color: mutedColor },
+                        grid: { color: gridColor },
+                        title: {
+                            display: true,
+                            text: 'Days',
+                            color: mutedColor,
+                            font: { size: 11 }
+                        }
                     },
                     x: {
                         ticks: { color: textColor },
@@ -618,7 +645,7 @@ function renderTable() {
     const pageData = filteredIncidents.slice(start, end);
     
     if (pageData.length === 0) {
-        tbody.innerHTML = '</table><td colspan="8" style="text-align: center;">No incidents found</td></tr>';
+        tbody.innerHTML = '</table><td colspan="7" style="text-align: center;">No incidents found</td></tr>';
         const pagination = document.getElementById('pagination');
         if (pagination) pagination.innerHTML = '';
         return;
@@ -628,7 +655,6 @@ function renderTable() {
         <tr>
             <td><strong>${escapeHtml(inc.title || inc.name)}</strong><br><span style="font-size: 11px; color: var(--muted);">${escapeHtml(inc.location || 'No location')}</span></td>
             <td><span class="badge b-${inc.category || 'maintenance'}">${inc.category || 'maintenance'}</span></td>
-            <td><span class="badge b-${inc.priority || 'medium'}">${inc.priority || 'medium'}</span></td>
             <td><span class="badge b-${inc.status === 'in-progress' ? 'progress' : inc.status}">${inc.status || 'pending'}</span></td>
             <td>${escapeHtml(inc.reporter || 'Anonymous')}</td>
             <td>${inc.studentId || inc.student_id || 'N/A'}</td>
@@ -724,12 +750,11 @@ function closeModal() {
 }
 
 function exportToCSV() {
-    const headers = ['Title', 'Location', 'Category', 'Priority', 'Status', 'Reporter', 'Student ID', 'Date'];
+    const headers = ['Title', 'Location', 'Category', 'Status', 'Reporter', 'Student ID', 'Date'];
     const rows = filteredIncidents.map(inc => [
         inc.title || inc.name,
         inc.location || '',
         inc.category || '',
-        inc.priority || '',
         inc.status || '',
         inc.reporter || '',
         inc.studentId || inc.student_id || '',

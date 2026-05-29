@@ -8,6 +8,31 @@
     <link rel="icon" href="/Assets/Images/logo.png" type="image/png">
     <link rel="stylesheet" href="/Assets/Admin_dashboard/user_page/style.css">
     <base href="/">
+    <style>
+        .search-bar-container {
+            margin-bottom: 24px;
+        }
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 16px;
+            border: 1px solid var(--border, #E2E8F0);
+            border-radius: 40px;
+            font-size: 14px;
+            font-family: 'DM Sans', sans-serif;
+            background: var(--surface, white);
+            color: var(--text, #1A2C3E);
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .search-input:focus {
+            border-color: #1D9E75;
+            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.1);
+        }
+        .search-input::placeholder {
+            color: var(--muted, #5A6E7F);
+        }
+    </style>
 </head>
 <body>
     <div class="drawer-overlay" id="overlay"></div>
@@ -27,10 +52,6 @@
             <button class="drawer-item" data-page="dashboard">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 <span>Dashboard</span>
-            </button>
-            <button class="drawer-item" data-page="incidents">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                <span>Incidents</span>
             </button>
             <button class="drawer-item" data-page="analytics">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -128,6 +149,11 @@
             <h2 class="section-title">Student Directory</h2>
         </div>
 
+        <!-- SEARCH BAR - ADDED ABOVE TABLE -->
+        <div class="search-bar-container">
+            <input type="text" id="studentSearchInput" class="search-input" placeholder="Search by name, ID number, or email...">
+        </div>
+
         <div class="table-wrap">
             <table>
                 <thead>
@@ -149,8 +175,24 @@
 
     <!-- Shared Bottom Navigation Script -->
     <script src="/bottom-nav.js"></script>
-
-    <!-- Page-specific JavaScript -->
+    <script>
+    (function() {
+        setTimeout(function() {
+            const navItems = document.querySelectorAll('.simple-bottom-nav-item');
+            navItems.forEach(item => {
+                const nav = item.getAttribute('data-nav');
+                if (nav === 'incidents') {
+                    item.remove();
+                }
+            });
+            
+            const nav = document.querySelector('.simple-bottom-nav');
+            if (nav && nav.children.length === 3) {
+                nav.style.justifyContent = 'space-evenly';
+            }
+        }, 100);
+    })();
+</script>
     <script type="module" src="/Assets/Admin_dashboard/user_page/function.js"></script>
 
     <!-- Notification Dropdown -->
@@ -188,5 +230,66 @@
             </form>
         </div>
     </div>
+    <script>
+        (function setupSearch() {
+            const observer = new MutationObserver(function(mutations) {
+                const searchInput = document.getElementById('studentSearchInput');
+                if (searchInput && !searchInput.hasAttribute('data-search-bound')) {
+                    searchInput.setAttribute('data-search-bound', 'true');
+                    
+                    searchInput.addEventListener('input', function(e) {
+                        const searchTerm = e.target.value.toLowerCase().trim();
+                        const tbody = document.getElementById('studentsTableBody');
+                        if (!tbody) return;
+                        
+                        const rows = tbody.querySelectorAll('tr');
+                        let hasVisibleRows = false;
+                        
+                        rows.forEach(row => {
+                            // Skip if it's the "no students" message row
+                            if (row.querySelector('td[colspan]')) return;
+                            
+                            const studentName = row.querySelector('.student-name')?.textContent.toLowerCase() || '';
+                            const studentDetail = row.querySelector('.student-detail')?.textContent.toLowerCase() || '';
+                            const idNumber = row.querySelector('td:nth-child(2) strong')?.textContent.toLowerCase() || '';
+                            
+                            const matches = searchTerm === '' || 
+                                studentName.includes(searchTerm) || 
+                                studentDetail.includes(searchTerm) || 
+                                idNumber.includes(searchTerm);
+                            
+                            if (matches) {
+                                row.style.display = '';
+                                hasVisibleRows = true;
+                            } else {
+                                row.style.display = 'none';
+                            }
+                        });
+
+                        const noResultRow = tbody.querySelector('.no-search-results');
+                        if (!hasVisibleRows && rows.length > 0 && !rows[0].querySelector('td[colspan]')) {
+                            if (!noResultRow) {
+                                const tr = document.createElement('tr');
+                                tr.className = 'no-search-results';
+                                tr.innerHTML = `<td colspan="4" style="text-align:center;padding:40px;"> No students match "${escapeHtml(searchTerm)}"</td>`;
+                                tbody.appendChild(tr);
+                            }
+                        } else if (noResultRow) {
+                            noResultRow.remove();
+                        }
+                    });
+                }
+            });
+            
+            observer.observe(document.body, { childList: true, subtree: true });
+            
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        })();
+    </script>
 </body>
 </html>

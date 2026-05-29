@@ -24,15 +24,16 @@
     --purple: #7C3AED;
     --purple-light: #F5F3FF;
     --navy: #1E3A5F;
-    --drawer-green: #0D5C45;
-    --drawer-green-dark: #094233;
+    --drawer-green: #1A6B5A;     
+    --drawer-green-dark: #0F4D41;  
+    --drawer-green-light: #248F7A;  
     --shadow: rgba(0,0,0,0.08);
     --shadow-lg: rgba(0,0,0,0.12);
     --sidebar-width: 260px;
     --bottom-nav-height: 65px;
+    --topbar-height: 64px;
 }
 
-/* ===== DARK MODE ===== */
 body.dark-mode {
     --bg: #0F172A;
     --surface: #1E293B;
@@ -45,8 +46,9 @@ body.dark-mode {
     --teal-light: #064E3B;
     --teal-dark: #059669;
     --navy: #0F172A;
-    --drawer-green: #065F46;
-    --drawer-green-dark: #043425;
+    --drawer-green: #1A6B5A;     
+    --drawer-green-dark: #0F4D41; 
+    --drawer-green-light: #248F7A; 
     --shadow: rgba(0,0,0,0.3);
     --shadow-lg: rgba(0,0,0,0.4);
     --red-light: #450A0A;

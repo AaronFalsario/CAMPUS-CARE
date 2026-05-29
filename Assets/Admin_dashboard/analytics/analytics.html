@@ -52,10 +52,6 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
             <span>Dashboard</span>
         </button>
-        <button class="drawer-item" id="incidentsNav" data-page="incidents">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <span>Incidents</span>
-        </button>
         <button class="drawer-item active" id="analyticsNav" data-page="analytics">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M21 12a9 9 0 1 1-9-9"/>
@@ -111,34 +107,71 @@
 
 <main class="main-content">
     <div class="page-header">
-        <h1 class="page-title">📊 Analytics Dashboard</h1>
+        <h1 class="page-title">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-9-9"/>
+                <path d="M12 3v9h9"/>
+                <path d="M12 12 22 2"/>
+            </svg> 
+            Analytics Dashboard</h1>
         <p class="page-sub">Monitor incident trends, categories, and campus safety metrics</p>
     </div>
 
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-icon">📋</div>
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                </div>
             <div>
                 <div class="stat-value" id="totalIncidents">0</div>
                 <div class="stat-label">Total Incidents</div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">⏳</div>
+            <div class="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="M4.93 4.93l1.41 1.41"/>
+                <path d="M17.66 17.66l1.41 1.41"/>
+            </svg>
+            </div>
             <div>
                 <div class="stat-value" id="pendingIncidents">0</div>
                 <div class="stat-label">Pending</div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">⚙️</div>
+            <div class="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                <path d="M12 2v2"/>
+                <path d="M12 20v2"/>
+                <path d="M2 12h2"/>
+                <path d="M20 12h2"/>
+            </svg>
+            </div>
             <div>
                 <div class="stat-value" id="inProgressIncidents">0</div>
                 <div class="stat-label">In Progress</div>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon">✅</div>
+            <div class="stat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            </div>
             <div>
                 <div class="stat-value" id="resolvedIncidents">0</div>
                 <div class="stat-label">Resolved</div>
@@ -163,29 +196,40 @@
 
     <div class="charts-row">
         <div class="chart-card">
-            <h3><i class="fas fa-chart-bar"></i> Priority Distribution</h3>
+            <h3><i class="fas fa-clock"></i> Avg. Days to Resolve by Category</h3>
             <div class="chart-container">
                 <canvas id="priorityChart"></canvas>
             </div>
         </div>
         <div class="chart-card">
-            <h3><i class="fas fa-chart-donut"></i> Status Overview</h3>
+            <h3><i class="fas fa-chart-pie"></i> Status Overview</h3>
             <div class="chart-container">
                 <canvas id="statusChart"></canvas>
             </div>
         </div>
     </div>
 
+    <!-- Enhanced Filter Bar with Search and Filter Chips -->
     <div class="filter-bar">
         <div class="search-bar">
             <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Search incidents...">
+            <input type="text" id="searchInput" placeholder="Search by title, location, reporter, student ID, or description...">
+            <button id="clearSearchBtn" class="clear-search-btn" style="display: none;">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-        <button class="filter-chip active" data-filter="all">All</button>
-        <button class="filter-chip" data-filter="pending">Pending</button>
-        <button class="filter-chip" data-filter="in-progress">In Progress</button>
-        <button class="filter-chip" data-filter="resolved">Resolved</button>
-        <button class="export-btn" id="exportTableBtn"><i class="fas fa-file-csv"></i> Export CSV</button>
+        <div class="filter-chips">
+            <button class="filter-chip active" data-filter="all">All</button>
+            <button class="filter-chip" data-filter="pending">Pending</button>
+            <button class="filter-chip" data-filter="in-progress">In Progress</button>
+            <button class="filter-chip" data-filter="resolved">Resolved</button>
+        </div>
+        <div class="export-actions">
+            <button class="export-btn" id="exportTableBtn" title="Export to CSV">
+                <i class="fas fa-file-csv"></i> Export CSV
+            </button>
+            <span id="searchResultsCount" class="search-results-count"></span>
+        </div>
     </div>
 
     <div class="table-container">
@@ -194,7 +238,6 @@
                 <tr>
                     <th>INCIDENT</th>
                     <th>CATEGORY</th>
-                    <th>PRIORITY</th>
                     <th>STATUS</th>
                     <th>REPORTER</th>
                     <th>STUDENT ID</th>
@@ -203,15 +246,13 @@
                 </tr>
             </thead>
             <tbody id="tableBody">
-                <tr><td colspan="8" style="text-align: center;">Loading incidents...</td></tr>
+                <tr><td colspan="7" style="text-align: center;">Loading incidents...</td></tr>
             </tbody>
         </table>
     </div>
 
     <div class="pagination" id="pagination"></div>
 </main>
-
-<!-- BOTTOM NAVIGATION - REMOVED HARDCODED NAV, USING SHARED SCRIPT INSTEAD -->
 
 <!-- Incident Detail Modal -->
 <div id="incidentModal" class="modal-overlay">
@@ -264,8 +305,140 @@
     </div>
 </div>
 
+<style>
+    /* Additional search bar styles */
+    .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding: 16px;
+        background: var(--surface, #FFFFFF);
+        border-radius: 16px;
+        border: 1px solid var(--border, #E4E1DB);
+    }
+    
+    .search-bar {
+        flex: 2;
+        min-width: 250px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--bg, #F4F3EF);
+        border-radius: 40px;
+        padding: 8px 16px;
+        border: 1px solid var(--border, #E4E1DB);
+        transition: all 0.2s ease;
+    }
+    
+    .search-bar:focus-within {
+        border-color: #1D9E75;
+        box-shadow: 0 0 0 2px rgba(29, 158, 117, 0.1);
+    }
+    
+    .search-bar i {
+        color: var(--muted, #7A776F);
+        font-size: 14px;
+    }
+    
+    .search-bar input {
+        flex: 1;
+        background: none;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        color: var(--text, #1A1A1A);
+        font-family: inherit;
+    }
+    
+    .search-bar input::placeholder {
+        color: var(--muted, #7A776F);
+    }
+    
+    .clear-search-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--muted, #7A776F);
+        padding: 4px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    
+    .clear-search-btn:hover {
+        background: rgba(0,0,0,0.05);
+        color: #DC2626;
+    }
+    
+    body.dark-mode .clear-search-btn:hover {
+        background: rgba(255,255,255,0.1);
+    }
+    
+    .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .export-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .search-results-count {
+        font-size: 12px;
+        color: var(--muted, #7A776F);
+        padding: 4px 10px;
+        background: var(--bg, #F4F3EF);
+        border-radius: 20px;
+    }
+    
+    @media (max-width: 768px) {
+        .filter-bar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .search-bar {
+            width: 100%;
+        }
+        
+        .filter-chips {
+            justify-content: center;
+        }
+        
+        .export-actions {
+            justify-content: space-between;
+        }
+    }
+</style>
+
 <!-- Shared Bottom Navigation Script -->
 <script src="/bottom-nav.js"></script>
+<script>
+    (function() {
+        setTimeout(function() {
+            const navItems = document.querySelectorAll('.simple-bottom-nav-item');
+            navItems.forEach(item => {
+                const nav = item.getAttribute('data-nav');
+                if (nav === 'incidents') {
+                    item.remove();
+                }
+            });
+            
+            const nav = document.querySelector('.simple-bottom-nav');
+            if (nav && nav.children.length === 3) {
+                nav.style.justifyContent = 'space-evenly';
+            }
+        }, 100);
+    })();
+</script>
 
 <!-- Page-specific JavaScript -->
 <script type="module" src="/Assets/Admin_dashboard/analytics/analytics.js"></script>

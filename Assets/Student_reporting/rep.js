@@ -1018,14 +1018,12 @@ async function performSubmit(forceSubmit = false) {
             category:           data.category,
             priority:           data.priority,
             description:        data.description,
-            image_url:          data.imageData || null,   // base64 or null
+            image_url:          data.imageData || null,
             student_name:       finalStudentName,
             student_id_number:  currentStudent.studentId,
             status:             'pending',
             is_anonymous:       isAnonymous ? 'true' : 'false',
             ai_confidence:      aiConfidenceValue,
-            // resolved_at is left out — Supabase defaults it to NULL
-            // created_at and updated_at have now() defaults but we set them explicitly for clarity
             created_at:         new Date().toISOString(),
             updated_at:         new Date().toISOString()
         };
@@ -1064,8 +1062,13 @@ async function performSubmit(forceSubmit = false) {
             showNotification('✅ Report submitted successfully!', 'success');
         }
 
+        // FIXED: Proper redirect to dashboard with .html extension
         setTimeout(() => {
-            window.location.href = '/Assets/Student_dashboard/SDB.html';
+            console.log('🔄 Redirecting to Student Dashboard...');
+            // Use absolute path from root
+            const dashboardUrl = '/Assets/Student_dashboard/SDB.html';
+            console.log('📍 Redirect URL:', dashboardUrl);
+            window.location.href = dashboardUrl;
         }, 2000);
 
     } catch (error) {
@@ -1150,7 +1153,9 @@ window.selPriority = function(element) {
     if (priorityInput) priorityInput.value = element.getAttribute('data-priority');
 };
 
-window.goBack = function() { window.location.href = '/Assets/Student_dashboard/SDB.html'; };
+window.goBack = function() { 
+    window.location.href = '/Assets/Student_dashboard/SDB.html'; 
+};
 
 function scrollToError(element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });

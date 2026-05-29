@@ -4,14 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CampusCare – Making Campus Safer Together</title>
-    
-    <!-- ✅ PASSWORD RESET REDIRECT - MUST BE FIRST -->
     <script>
         (function() {
-            // Check if URL has a password reset token
             if (window.location.hash && window.location.hash.includes('access_token')) {
                 const fullHash = window.location.hash;
-                // Redirect to the reset password page with the token
                 window.location.href = '/Assets/login/password_admin/reset_password.html' + fullHash;
             }
         })();
@@ -23,8 +19,6 @@
     <link rel="icon" href="/Assets/Images/logo.png" type="image/png">
 </head>
 <body>
-
-<!-- NAV -->
 <nav>
     <a href="#" class="nav-logo">
         <img src="/Assets/Images/logo.png" alt="CampusCare Logo">

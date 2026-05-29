@@ -6,11 +6,6 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 // DOM Elements
 const studentLoginCard = document.getElementById('studentLoginCard');
-const signupForm = document.getElementById('signupForm');
-const showSignupBtn = document.getElementById('showSignup');
-const showLoginBtn = document.getElementById('showLogin');
-const loginBtn = document.getElementById('loginBtn');
-const signupBtn = document.getElementById('signupBtn');
 const loaderOverlay = document.getElementById('loaderOverlay');
 
 // ========== TERMS MODAL TRIGGER ==========
@@ -148,10 +143,6 @@ function showNotification(message, isError = false, duration = 3000) {
                 from { width: 100%; }
                 to   { width: 0%; }
             }
-            @media (max-width: 480px) {
-                .custom-toast { left: 12px; right: 12px; bottom: 20px; padding: 12px 14px; }
-                .custom-toast .toast-message { font-size: 12px; }
-            }
         `;
         document.head.appendChild(style);
     }
@@ -163,12 +154,6 @@ function showNotification(message, isError = false, duration = 3000) {
 }
 
 // ========== HELPERS ==========
-function applySlideUpAnimation(element) {
-    element.classList.remove('slideUp');
-    void element.offsetWidth;
-    element.classList.add('slideUp');
-}
-
 function togglePasswordVisibility(inputEl, toggleEl) {
     if (!inputEl || !toggleEl) return;
     toggleEl.addEventListener('click', () => {
@@ -212,8 +197,6 @@ async function updateStudentActivityOnLogin(userId) {
             console.error('Error updating login status:', error);
             return false;
         }
-
-        console.log(`✅ Student ${userId} marked active at ${new Date().toLocaleTimeString()}`);
         return true;
     } catch (error) {
         console.error('updateStudentActivityOnLogin failed:', error);
@@ -221,122 +204,37 @@ async function updateStudentActivityOnLogin(userId) {
     }
 }
 
-// ========== SETUP SIGNUP EMAIL INPUT WITH VISUAL DOMAIN SUFFIX ==========
-function setupSignupEmailInput() {
-    const signupEmailInput = document.getElementById('signupEmail');
-    if (signupEmailInput) {
-        // Change placeholder
-        signupEmailInput.placeholder = "Enter your Student ID";
-        
-        // Create wrapper for input with suffix
-        const wrapper = signupEmailInput.parentElement;
-        wrapper.style.position = 'relative';
-        wrapper.style.display = 'flex';
-        wrapper.style.alignItems = 'center';
-        
-        // Add visual suffix that shows @gordoncollege.edu.ph
-        const suffix = document.createElement('span');
-        suffix.textContent = '@gordoncollege.edu.ph';
-        suffix.style.position = 'absolute';
-        suffix.style.right = '12px';
-        suffix.style.top = '50%';
-        suffix.style.transform = 'translateY(-50%)';
-        suffix.style.fontSize = '12px';
-        suffix.style.color = '#64748b';
-        suffix.style.backgroundColor = '#f1f5f9';
-        suffix.style.padding = '4px 8px';
-        suffix.style.borderRadius = '6px';
-        suffix.style.pointerEvents = 'none';
-        suffix.style.zIndex = '2';
-        wrapper.appendChild(suffix);
-        
-        // Adjust input padding
-        signupEmailInput.style.paddingRight = '170px';
-        
-        // Handle input to prevent @ symbol and show error if needed
-        signupEmailInput.addEventListener('input', function(e) {
-            let value = this.value;
-            // Remove any @ symbol if user tries to type it
-            if (value.includes('@')) {
-                value = value.replace(/@.*$/, '');
-                this.value = value;
-            }
-            // Remove spaces
-            if (value.includes(' ')) {
-                value = value.replace(/\s/g, '');
-                this.value = value;
-            }
-        });
-        
-        // Add hint text
-        const hint = document.createElement('div');
-        hint.className = 'email-hint';
-        hint.style.marginTop = '5px';
-        hint.innerHTML = '<i class="fas fa-info-circle"></i> Enter your Student ID - @gordoncollege.edu.ph will be added automatically';
-        signupEmailInput.parentElement.parentElement.appendChild(hint);
-        
-        // Change icon to ID card
-        const icon = signupEmailInput.parentElement.querySelector('i');
-        if (icon) {
-            icon.classList.remove('fa-envelope');
-            icon.classList.add('fa-id-card');
-        }
-    }
-}
-
 // ========== SETUP LOGIN INPUT ==========
 function setupLoginInput() {
     const loginInput = document.getElementById('loginEmail');
     if (loginInput) {
-        // Change placeholder
         loginInput.placeholder = "Enter your Student ID";
         
-        // Add hint text below
         const hint = document.createElement('div');
         hint.className = 'email-hint';
         hint.style.marginTop = '5px';
         hint.innerHTML = '<i class="fas fa-info-circle"></i> Enter your Student ID - @gordoncollege.edu.ph will be added automatically';
-        loginInput.parentElement.parentElement.appendChild(hint);
+        const parent = loginInput.parentElement?.parentElement;
+        if (parent && !parent.querySelector('.email-hint')) {
+            parent.appendChild(hint);
+        }
         
-        // Change icon to ID card
-        const icon = loginInput.parentElement.querySelector('i');
-        if (icon) {
+        const icon = loginInput.parentElement?.querySelector('i');
+        if (icon && icon.classList.contains('fa-envelope')) {
             icon.classList.remove('fa-envelope');
             icon.classList.add('fa-id-card');
         }
     }
 }
 
-// ========== FORM TOGGLE ==========
-if (showSignupBtn) {
-    showSignupBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        studentLoginCard.style.display = 'none';
-        signupForm.style.display = 'block';
-        applySlideUpAnimation(signupForm);
-    });
-}
-
-if (showLoginBtn) {
-    showLoginBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        signupForm.style.display = 'none';
-        studentLoginCard.style.display = 'block';
-        applySlideUpAnimation(studentLoginCard);
-    });
-}
-
-// ========== PASSWORD TOGGLES ==========
+// ========== PASSWORD TOGGLE ==========
 togglePasswordVisibility(
     document.getElementById('loginPassword'),
     document.getElementById('toggleLoginPassword')
 );
-togglePasswordVisibility(
-    document.getElementById('signupPassword'),
-    document.getElementById('toggleSignupPassword')
-);
 
 // ========== LOGIN - Auto append domain ==========
+const loginBtn = document.getElementById('loginBtn');
 if (loginBtn) {
     loginBtn.addEventListener('click', async () => {
         let studentId = document.getElementById('loginEmail').value.trim();
@@ -347,7 +245,6 @@ if (loginBtn) {
             return;
         }
 
-        // Automatically add @gordoncollege.edu.ph
         let email = studentId;
         if (!email.includes('@')) {
             email = studentId + '@gordoncollege.edu.ph';
@@ -403,7 +300,6 @@ if (loginBtn) {
             }
 
             if (!studentData) {
-                console.log('Student record missing, creating one...');
                 const { error: insertError } = await supabase
                     .from('student')
                     .insert([{
@@ -469,134 +365,13 @@ if (loginBtn) {
     });
 }
 
-// ========== SIGNUP - Auto append domain ==========
-if (signupBtn) {
-    signupBtn.addEventListener('click', async () => {
-        const fullName  = document.getElementById('signupName').value.trim();
-        const studentId = document.getElementById('signupStudentId').value.trim();
-        let studentIdNumber = document.getElementById('signupEmail').value.trim();
-        const password  = document.getElementById('signupPassword').value;
-
-        if (!fullName || !studentId || !studentIdNumber || !password) {
-            showNotification('Please fill in all fields', true);
-            return;
-        }
-
-        // Auto-append domain
-        let email = studentIdNumber + '@gordoncollege.edu.ph';
-        email = email.replace(/@+/g, '@');
-        
-        // Remove any spaces
-        email = email.replace(/\s/g, '');
-
-        if (!isValidGordonEmail(email)) {
-            showNotification('Please enter a valid Student ID.', true);
-            document.getElementById('signupEmail').classList.add('domain-error');
-            return;
-        }
-
-        if (password.length < 6) {
-            showNotification('Password must be at least 6 characters.', true);
-            return;
-        }
-
-        showLoader();
-
-        try {
-            const { data: existingId } = await supabase
-                .from('student')
-                .select('student_id')
-                .eq('student_id', studentId)
-                .maybeSingle();
-
-            if (existingId) {
-                hideLoader();
-                showNotification('Student ID already registered. Please login.', true);
-                return;
-            }
-
-            const { data: existingEmail } = await supabase
-                .from('student')
-                .select('email')
-                .eq('email', email)
-                .maybeSingle();
-
-            if (existingEmail) {
-                hideLoader();
-                showNotification('Email already registered. Please login.', true);
-                return;
-            }
-
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: { 
-                    data: { 
-                        full_name: fullName, 
-                        student_id: studentId 
-                    },
-                    emailRedirectTo: `${window.location.origin}/Assets/login/log.html`
-                }
-            });
-
-            if (error) throw error;
-            if (!data.user) throw new Error('Signup failed.');
-
-            const { error: dbError } = await supabase
-                .from('student')
-                .insert([{
-                    id:          data.user.id,
-                    full_name:   fullName,
-                    student_id:  studentId,
-                    email:       email,
-                    status:      'pending',  
-                    is_active:   false,      
-                    last_login:  null,
-                    last_logout: null
-                }]);
-
-            if (dbError) throw dbError;
-
-            showNotification('✅ Account created! Please check your email to verify your account before logging in.', false, 6000);
-            
-            document.getElementById('signupName').value = '';
-            document.getElementById('signupStudentId').value = '';
-            document.getElementById('signupEmail').value = '';
-            document.getElementById('signupPassword').value = '';
-            
-            setTimeout(() => {
-                signupForm.style.display = 'none';
-                studentLoginCard.style.display = 'block';
-                applySlideUpAnimation(studentLoginCard);
-                
-                const loginMessage = document.createElement('div');
-                loginMessage.className = 'login-message';
-                loginMessage.innerHTML = '<i class="fas fa-envelope"></i> Please verify your email before logging in. Check your inbox!';
-                loginMessage.style.cssText = 'background: #d1fae5; color: #065f46; padding: 12px; border-radius: 10px; margin-top: 16px; font-size: 13px; text-align: center;';
-                
-                const existingMsg = studentLoginCard.querySelector('.login-message');
-                if (existingMsg) existingMsg.remove();
-                studentLoginCard.appendChild(loginMessage);
-                
-                setTimeout(() => loginMessage.remove(), 5000);
-            }, 3000);
-
-        } catch (error) {
-            console.error('Signup error:', error);
-            showNotification(error.message || 'Signup failed. Please try again.', true);
-            hideLoader();
-        }
-    });
-}
-
-// ========== LOGOUT ==========
+// ========== LOGOUT FUNCTION (exposed globally) ==========
 window.studentLogout = async function () {
     try {
         const stored = localStorage.getItem('currentStudent');
         if (stored) {
             const student = JSON.parse(stored);
-
-            const { error } = await supabase
+            await supabase
                 .from('student')
                 .update({
                     status:      'inactive',
@@ -604,18 +379,10 @@ window.studentLogout = async function () {
                     last_logout: new Date().toISOString()
                 })
                 .eq('id', student.userId);
-
-            if (error) {
-                console.error('Error recording logout:', error);
-            } else {
-                console.log(`✅ Student ${student.email} logged out at ${new Date().toLocaleTimeString()}`);
-            }
         }
-
         await supabase.auth.signOut();
         localStorage.removeItem('currentStudent');
         window.location.href = '/Assets/login/log.html';
-
     } catch (error) {
         console.error('Logout error:', error);
         localStorage.removeItem('currentStudent');
@@ -646,7 +413,7 @@ if (forgotPasswordBtn) {
 
             if (!exists) {
                 hideLoader();
-                showNotification('Email not found. Please sign up first.', true, 4000);
+                showNotification('Email not found. Please contact support.', true, 4000);
                 return;
             }
 
@@ -681,7 +448,6 @@ function showEmailPrompt() {
                 <div class="email-prompt-body">
                     <p>Enter your registered @gordoncollege.edu.ph email to receive a reset link.</p>
                     <input type="email" id="promptEmail" placeholder="student@gordoncollege.edu.ph" autocomplete="off">
-                    <div class="email-hint">⚠️ Only registered emails will receive a reset link</div>
                 </div>
                 <div class="email-prompt-footer">
                     <button class="email-prompt-cancel">Cancel</button>
@@ -697,7 +463,6 @@ function showEmailPrompt() {
                 .email-prompt-modal {
                     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
                     z-index: 20000; display: flex; align-items: center; justify-content: center;
-                    animation: fadeIn 0.2s ease;
                 }
                 .email-prompt-overlay {
                     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -705,85 +470,54 @@ function showEmailPrompt() {
                 }
                 .email-prompt-container {
                     position: relative; background: white; border-radius: 16px;
-                    width: 90%; max-width: 340px; overflow: hidden; animation: slideUp 0.3s ease;
+                    width: 90%; max-width: 340px; overflow: hidden;
                 }
                 .email-prompt-header {
                     display: flex; justify-content: space-between; align-items: center;
-                    padding: 16px 16px 12px; border-bottom: 1px solid #e2e8f0;
+                    padding: 16px; border-bottom: 1px solid #e2e8f0;
                 }
-                .email-prompt-header h3 { font-size: 16px; font-weight: 600; color: #1e293b; margin: 0; }
-                .email-prompt-close {
-                    background: none; border: none; font-size: 24px; cursor: pointer;
-                    color: #94a3b8; padding: 0; line-height: 1;
-                }
+                .email-prompt-header h3 { margin: 0; }
+                .email-prompt-close { background: none; border: none; font-size: 24px; cursor: pointer; }
                 .email-prompt-body { padding: 16px; }
-                .email-prompt-body p { font-size: 13px; color: #64748b; margin-bottom: 12px; }
+                .email-prompt-body p { font-size: 13px; margin-bottom: 12px; }
                 .email-prompt-body input {
-                    width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0;
-                    border-radius: 8px; font-size: 14px; font-family: inherit; box-sizing: border-box;
+                    width: 100%; padding: 10px; border: 1px solid #ccc;
+                    border-radius: 8px; box-sizing: border-box;
                 }
-                .email-prompt-body input:focus { outline: none; border-color: #2563eb; }
-                .email-hint { font-size: 11px; color: #64748b; margin-top: 8px; }
                 .email-prompt-footer {
-                    display: flex; gap: 12px; padding: 12px 16px 16px; border-top: 1px solid #f1f5f9;
+                    display: flex; gap: 12px; padding: 16px;
+                    border-top: 1px solid #f1f5f9;
                 }
                 .email-prompt-cancel, .email-prompt-submit {
-                    flex: 1; padding: 10px; border-radius: 8px; font-size: 13px;
-                    font-weight: 600; cursor: pointer; border: none; transition: all 0.2s;
+                    flex: 1; padding: 10px; border-radius: 8px;
+                    cursor: pointer; border: none;
                 }
-                .email-prompt-cancel { background: #f1f5f9; color: #64748b; }
+                .email-prompt-cancel { background: #f1f5f9; }
                 .email-prompt-submit { background: #2563eb; color: white; }
-                .email-prompt-submit:hover { background: #1d4ed8; }
-                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes slideUp {
-                    from { transform: translateY(20px); opacity: 0; }
-                    to   { transform: translateY(0); opacity: 1; }
-                }
             `;
             document.head.appendChild(style);
         }
 
         document.body.appendChild(modal);
 
-        const input     = modal.querySelector('#promptEmail');
+        const input = modal.querySelector('#promptEmail');
         const submitBtn = modal.querySelector('.email-prompt-submit');
         const cancelBtn = modal.querySelector('.email-prompt-cancel');
-        const closeBtn  = modal.querySelector('.email-prompt-close');
-        const overlay   = modal.querySelector('.email-prompt-overlay');
+        const closeBtn = modal.querySelector('.email-prompt-close');
+        const overlay = modal.querySelector('.email-prompt-overlay');
 
         const cleanup = () => modal.remove();
 
         submitBtn.onclick = () => { const v = input.value.trim(); cleanup(); resolve(v || null); };
         cancelBtn.onclick = () => { cleanup(); resolve(null); };
-        closeBtn.onclick  = () => { cleanup(); resolve(null); };
-        overlay.onclick   = () => { cleanup(); resolve(null); };
+        closeBtn.onclick = () => { cleanup(); resolve(null); };
+        overlay.onclick = () => { cleanup(); resolve(null); };
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') { const v = input.value.trim(); cleanup(); resolve(v || null); }
         });
 
         input.focus();
     });
-}
-
-// ========== CSS ==========
-function addStyles() {
-    if (document.querySelector('#login-base-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'login-base-styles';
-    style.textContent = `
-        .domain-error {
-            border-color: #DC2626 !important;
-            background-color: #FEF2F2 !important;
-        }
-        .slideUp {
-            animation: slideUp 0.4s ease-out;
-        }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-    `;
-    document.head.appendChild(style);
 }
 
 // ========== SESSION CHECK ==========
@@ -793,12 +527,8 @@ async function checkExistingSession() {
 
     try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            if (user.email_confirmed_at) {
-                window.location.href = '/Assets/Student_dashboard/SDB.html';
-            } else {
-                localStorage.removeItem('currentStudent');
-            }
+        if (user && user.email_confirmed_at) {
+            window.location.href = '/Assets/Student_dashboard/SDB.html';
         } else {
             localStorage.removeItem('currentStudent');
         }
@@ -809,12 +539,10 @@ async function checkExistingSession() {
 
 // ========== INIT ==========
 function init() {
-    addStyles();
     setupLoginInput();
-    setupSignupEmailInput();
-    setupTermsModal();  // ADDED: Terms modal trigger
+    setupTermsModal();
     checkExistingSession();
-    console.log('✅ Login page ready - Auto append domain for both login and signup');
+    console.log('✅ Login page ready - Sign up removed, login only');
 }
 
 if (document.readyState === 'loading') {

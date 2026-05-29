@@ -254,7 +254,6 @@ function showToastMessage(message, type = 'success') {
 function confirmLogout() {
     const isMobile = window.innerWidth <= 768;
     
-    // Create custom confirmation modal
     const confirmModal = document.createElement('div');
     confirmModal.style.cssText = `
         position: fixed;
@@ -290,7 +289,6 @@ function confirmLogout() {
         </div>
     `;
     
-    // Add animations if not present
     if (!document.querySelector('#modal-animations')) {
         const style = document.createElement('style');
         style.id = 'modal-animations';
@@ -1093,7 +1091,6 @@ function closeModal() {
 
 // ========== TABS (Modified: Security Tab Removed from Sidebar) ==========
 function setupTabs() {
-    // Remove the Security tab from the sidebar
     const securityTab = document.querySelector('.settings-sidebar-item[data-tab="security"]');
     if (securityTab) {
         securityTab.remove();
@@ -1210,7 +1207,6 @@ function setupNavigation() {
         });
     });
     
-    // IMPROVED LOGOUT BUTTON
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         const newLogoutBtn = logoutBtn.cloneNode(true);
@@ -1289,6 +1285,444 @@ function setupButtons() {
     }
 }
 
+// ========== EXPORT TO EXCEL WITH PROPER HEADER ==========
+async function exportToExcel() {
+    try {
+        showToastMessage('Generating Excel report...', 'info');
+        
+        const { data: incidents, error } = await supabase
+            .from('incident')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const admin = JSON.parse(localStorage.getItem('currentAdmin') || '{}');
+        const currentDate = new Date().toLocaleString('en-US', { 
+            year: 'numeric', 
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        
+        const totalIncidents = incidents.length;
+        const resolvedIncidents = incidents.filter(i => i.status === 'resolved').length;
+        const pendingIncidents = incidents.filter(i => i.status === 'pending').length;
+        const inProgressIncidents = incidents.filter(i => i.status === 'in-progress').length;
+        
+        const excelContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CampusCare Archive Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif; 
+            background: white; 
+            padding: 20px; 
+            color: #000000;
+        }
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #1D9E75 0%, #0D7A65 100%);
+            border-radius: 16px;
+            margin-bottom: 24px;
+            color: white;
+        }
+        .header h1 { font-size: 28px; margin: 0; }
+        .header p { margin: 5px 0 0; opacity: 0.9; font-size: 14px; }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            background: #F4F3EF;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+        .info-bar strong { color: #1D9E75; }
+        .stats-grid {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            background: #E8F5E9;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 100px;
+        }
+        .stat-card .stat-number { font-size: 28px; font-weight: 700; color: #1D9E75; }
+        .stat-card .stat-label { font-size: 11px; color: #333; }
+        .stat-card.orange { background: #FFF3E0; }
+        .stat-card.blue { background: #E3F2FD; }
+        .stat-card.orange .stat-number { color: #F59E0B; }
+        .stat-card.blue .stat-number { color: #3B82F6; }
+        .section-title {
+            color: #1D9E75;
+            margin-bottom: 12px;
+            font-size: 18px;
+            border-bottom: 2px solid #1D9E75;
+            padding-bottom: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 20px;
+        }
+        th {
+            background: #1D9E75;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 8px;
+            color: #000000;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+        .badge-high { background: #FEE2E2; color: #DC2626; }
+        .badge-medium { background: #FEF3C7; color: #D97706; }
+        .badge-low { background: #D1FAE5; color: #10B981; }
+        .badge-pending { background: #FEF3C7; color: #D97706; }
+        .badge-progress { background: #DBEAFE; color: #3B82F6; }
+        .badge-resolved { background: #D1FAE5; color: #10B981; }
+        .footer {
+            margin-top: 25px;
+            padding-top: 12px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 9px;
+            color: #666;
+        }
+        @media print {
+            body { padding: 0; margin: 0; }
+            .header, .stat-card, .info-bar, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { size: A4 landscape; margin: 1cm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+            <div>
+                <h1>CampusCare</h1>
+                <p>Gordon College Campus Safety & Incident Management System</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-bar">
+        <div><strong>Report Generated By:</strong> ${escapeHtml(admin.name || 'Administrator')}</div>
+        <div><strong>Date & Time:</strong> ${currentDate}</div>
+        <div><strong>Report ID:</strong> ARCH-${Date.now()}</div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-number">${totalIncidents}</div><div class="stat-label">Total Incidents</div></div>
+        <div class="stat-card orange"><div class="stat-number">${pendingIncidents}</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card blue"><div class="stat-number">${inProgressIncidents}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat-card"><div class="stat-number">${resolvedIncidents}</div><div class="stat-label">Resolved</div></div>
+    </div>
+    
+    <h3 class="section-title">📋 Incident Archive Report (${totalIncidents} records)</h3>
+    
+    <table>
+        <thead>
+            <tr><th>ID</th><th>Title</th><th>Category</th><th>Priority</th><th>Status</th><th>Location</th><th>Reporter</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+            ${incidents.map(inc => `
+                <tr>
+                    <td>${inc.id || 'N/A'}</td>
+                    <td>${escapeHtml((inc.title || 'Untitled').substring(0, 50))}</td>
+                    <td><span class="badge badge-${inc.category || 'maintenance'}">${inc.category || 'N/A'}</span></td>
+                    <td><span class="badge badge-${inc.priority || 'medium'}">${inc.priority || 'N/A'}</span></td>
+                    <td><span class="badge badge-${inc.status === 'in-progress' ? 'progress' : inc.status || 'pending'}">${inc.status || 'N/A'}</span></td>
+                    <td>${escapeHtml((inc.location || 'N/A').substring(0, 40))}</td>
+                    <td>${inc.is_anonymous === true ? 'Anonymous' : escapeHtml(inc.student_name || 'Student')}</td>
+                    <td>${new Date(inc.created_at).toLocaleDateString()}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>CampusCare v1.0 - Gordon College Campus Safety System | campuscare858@gmail.com</p>
+        <p>Generated on ${new Date().toLocaleString()}</p>
+    </div>
+</body>
+</html>
+        `;
+        
+        const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `CampusCare_Archive_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.xls`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        showToastMessage(`Exported ${incidents.length} records to Excel!`, 'success');
+        addInternalNotification('Archive Exported', `Excel report with ${incidents.length} incidents created`, false);
+        
+    } catch (error) {
+        console.error('Export to Excel failed:', error);
+        showToastMessage('Failed to export: ' + error.message, 'error');
+    }
+}
+
+// ========== PRINTABLE REPORT ==========
+async function printReport() {
+    try {
+        showToastMessage('Preparing printable report...', 'info');
+        
+        const { data: incidents, error } = await supabase
+            .from('incident')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        const admin = JSON.parse(localStorage.getItem('currentAdmin') || '{}');
+        const currentDate = new Date().toLocaleString('en-US', { 
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        });
+        
+        const totalIncidents = incidents.length;
+        const resolvedIncidents = incidents.filter(i => i.status === 'resolved').length;
+        const pendingIncidents = incidents.filter(i => i.status === 'pending').length;
+        const inProgressIncidents = incidents.filter(i => i.status === 'in-progress').length;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CampusCare Archive Report - Print</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif; 
+            background: white; 
+            padding: 20px; 
+            color: #000000;
+        }
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #1D9E75 0%, #0D7A65 100%);
+            border-radius: 16px;
+            margin-bottom: 24px;
+            color: white;
+        }
+        .header h1 { font-size: 28px; margin: 0; }
+        .header p { margin: 5px 0 0; opacity: 0.9; font-size: 14px; }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            background: #F4F3EF;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+        .info-bar strong { color: #1D9E75; }
+        .stats-grid {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            background: #E8F5E9;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 100px;
+        }
+        .stat-card .stat-number { font-size: 28px; font-weight: 700; color: #1D9E75; }
+        .stat-card .stat-label { font-size: 11px; color: #333; }
+        .stat-card.orange { background: #FFF3E0; }
+        .stat-card.blue { background: #E3F2FD; }
+        .stat-card.orange .stat-number { color: #F59E0B; }
+        .stat-card.blue .stat-number { color: #3B82F6; }
+        .section-title {
+            color: #1D9E75;
+            margin-bottom: 12px;
+            font-size: 18px;
+            border-bottom: 2px solid #1D9E75;
+            padding-bottom: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            margin-bottom: 20px;
+        }
+        th {
+            background: #1D9E75;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 8px;
+            color: #000000;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 600;
+        }
+        .badge-high { background: #FEE2E2; color: #DC2626; }
+        .badge-medium { background: #FEF3C7; color: #D97706; }
+        .badge-low { background: #D1FAE5; color: #10B981; }
+        .badge-pending { background: #FEF3C7; color: #D97706; }
+        .badge-progress { background: #DBEAFE; color: #3B82F6; }
+        .badge-resolved { background: #D1FAE5; color: #10B981; }
+        .footer {
+            margin-top: 25px;
+            padding-top: 12px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 9px;
+            color: #666;
+        }
+        @media print {
+            body { padding: 0; margin: 0; }
+            .header, .stat-card, .info-bar, th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { size: A4 landscape; margin: 1cm; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+                <h1>CampusCare</h1>
+                <p>Gordon College Campus Safety & Incident Management System</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-bar">
+        <div><strong>Report Generated By:</strong> ${escapeHtml(admin.name || 'Administrator')}</div>
+        <div><strong>Date & Time:</strong> ${currentDate}</div>
+        <div><strong>Report ID:</strong> ARCH-${Date.now()}</div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-number">${totalIncidents}</div><div class="stat-label">Total Incidents</div></div>
+        <div class="stat-card orange"><div class="stat-number">${pendingIncidents}</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card blue"><div class="stat-number">${inProgressIncidents}</div><div class="stat-label">In Progress</div></div>
+        <div class="stat-card"><div class="stat-number">${resolvedIncidents}</div><div class="stat-label">Resolved</div></div>
+    </div>
+    
+    <h3 class="section-title">📋 Incident Archive Report (${totalIncidents} records)</h3>
+    
+    <table>
+        <thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Priority</th><th>Status</th><th>Location</th><th>Reporter</th><th>Date</th></tr></thead>
+        <tbody>
+            ${incidents.map(inc => `
+                <tr>
+                    <td>${inc.id || 'N/A'}</td>
+                    <td>${escapeHtml((inc.title || 'Untitled').substring(0, 50))}</td>
+                    <td><span class="badge badge-${inc.category || 'maintenance'}">${inc.category || 'N/A'}</span></td>
+                    <td><span class="badge badge-${inc.priority || 'medium'}">${inc.priority || 'N/A'}</span></td>
+                    <td><span class="badge badge-${inc.status === 'in-progress' ? 'progress' : inc.status || 'pending'}">${inc.status || 'N/A'}</span></td>
+                    <td>${escapeHtml((inc.location || 'N/A').substring(0, 40))}</td>
+                    <td>${inc.is_anonymous === true ? 'Anonymous' : escapeHtml(inc.student_name || 'Student')}</td>
+                    <td>${new Date(inc.created_at).toLocaleDateString()}</td>
+                </tr>
+            `).join('')}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>CampusCare v1.0 - Gordon College Campus Safety System | campuscare858@gmail.com</p>
+        <p>Generated on ${new Date().toLocaleString()}</p>
+    </div>
+    
+    <script>window.print();<\/script>
+</body>
+</html>
+        `);
+        printWindow.document.close();
+        
+        showToastMessage('Print report prepared!', 'success');
+        
+    } catch (error) {
+        console.error('Print report failed:', error);
+        showToastMessage('Failed to prepare print report: ' + error.message, 'error');
+    }
+}
+
+// Add event listeners for the new buttons
+document.getElementById('exportExcelBtn')?.addEventListener('click', exportToExcel);
+document.getElementById('printReportBtn')?.addEventListener('click', printReport);
+
+// Replace the old archive button with new buttons
+const archiveBtn = document.getElementById('archiveDataBtn');
+if (archiveBtn) {
+    archiveBtn.innerHTML = '📊 Export to Excel';
+    archiveBtn.onclick = exportToExcel;
+    
+    // Add a print button next to it
+    const formGroup = archiveBtn.closest('.form-group');
+    if (formGroup) {
+        const printBtn = document.createElement('button');
+        printBtn.className = 'btn-secondary';
+        printBtn.id = 'printReportBtn';
+        printBtn.innerHTML = '🖨️ Printable Report';
+        printBtn.style.marginLeft = '10px';
+        printBtn.onclick = printReport;
+        formGroup.appendChild(printBtn);
+    }
+}
+
 // ========== BOTTOM NAVIGATION ==========
 function initBottomNav() {
     const bottomNavItems = document.querySelectorAll('.bottom-nav-item');
@@ -1324,12 +1758,10 @@ async function init() {
     setupButtons();
     initBottomNav();
     
-    // Set up auto-refresh interval
     if (window.persistentSettings.get('autoRefresh')) {
         window.persistentSettings.setupAutoRefresh(true);
     }
     
-    // Expose functions globally for HTML onclick
     window.openProfileModal = openProfileModal;
     window.closeProfileModal = closeProfileModal;
     window.saveMobileProfile = saveMobileProfile;

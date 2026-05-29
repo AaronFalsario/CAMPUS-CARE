@@ -15,7 +15,81 @@ let pollingInterval = null;
 let isSavingToStorage = false;
 let activeToasts = [];
 
-const RESOLVED_RETENTION_HOURS = 24;
+// ============ SVG ICONS ==========
+const Icons = {
+    // Status icons
+    pending: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    inProgress: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>`,
+    resolved: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`,
+    
+    // Category icons
+    security: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    maintenance: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
+    janitorial: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18"/><path d="M8 21V9"/><path d="M16 21V9"/><path d="M21 4H3l2 5h14l2-5z"/></svg>`,
+    facilities: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg>`,
+    
+    // Priority icons
+    highPriority: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>`,
+    mediumPriority: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/></svg>`,
+    lowPriority: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/></svg>`,
+    
+    // Action icons
+    view: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+    delete: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
+    archive: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`,
+    
+    // Navigation icons
+    dashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
+    analytics: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M12 3v9h9"/><path d="M12 12 22 2"/></svg>`,
+    users: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+    settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>`,
+    logout: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+    
+    // Notification icons
+    bell: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+    noNotifications: `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+    
+    // Miscellaneous
+    location: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+    calendar: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    reporter: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+    description: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`,
+    
+    // Sun/Moon for dark mode
+    sun: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>`,
+    moon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+    
+    // Close/Delete X
+    close: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`
+};
+
+function getCategoryIcon(category) {
+    const icons = {
+        security: Icons.security,
+        maintenance: Icons.maintenance,
+        janitorial: Icons.janitorial,
+        facilities: Icons.facilities
+    };
+    return icons[category] || Icons.maintenance;
+}
+
+function getPriorityIcon(priority) {
+    const icons = {
+        high: Icons.highPriority,
+        medium: Icons.mediumPriority,
+        low: Icons.lowPriority
+    };
+    return icons[priority] || Icons.mediumPriority;
+}
+
+function getStatusIcon(status) {
+    const icons = {
+        pending: Icons.pending,
+        'in-progress': Icons.inProgress,
+        resolved: Icons.resolved
+    };
+    return icons[status] || Icons.pending;
+}
 
 // ============ NOTIFICATION SYSTEM ==========
 let notifications = [];
@@ -25,7 +99,7 @@ let lastUrgentTime = 0;
 
 function isMobileOrTablet() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Tablet|iPad|Android(?!.*Mobile)/i.test(navigator.userAgent) ||
-           (window.innerWidth <= 1024);
+    (window.innerWidth <= 1024);
 }
 
 function loadNotifications() {
@@ -53,7 +127,6 @@ function saveNotifications() {
 
 // ========== IMPROVED TOAST NOTIFICATION ==========
 function showToastMessage(message, type = 'success') {
-    // Remove existing toasts
     activeToasts.forEach(toast => {
         if (toast && toast.parentNode) {
             if (toast.dataset.timeoutId) clearTimeout(parseInt(toast.dataset.timeoutId));
@@ -65,18 +138,19 @@ function showToastMessage(message, type = 'success') {
     const toast = document.createElement('div');
     const isMobile = window.innerWidth <= 768;
     
-    let icon = '';
+    let iconSvg = '';
     let bgColor = '';
     let borderColor = '';
     
     switch (type) {
-        case 'success': icon = '✓'; bgColor = '#10B981'; borderColor = '#059669'; break;
-        case 'error': icon = '✗'; bgColor = '#DC2626'; borderColor = '#991B1B'; break;
-        case 'warning': icon = '⚠️'; bgColor = '#F59E0B'; borderColor = '#D97706'; break;
-        case 'info': icon = 'ℹ️'; bgColor = '#3B82F6'; borderColor = '#2563EB'; break;
-        case 'urgent': icon = '🚨'; bgColor = '#DC2626'; borderColor = '#991B1B'; break;
-        case 'delete': icon = '🗑️'; bgColor = '#EF4444'; borderColor = '#B91C1C'; break;
-        default: icon = '✓'; bgColor = '#10B981'; borderColor = '#059669';
+        case 'success': iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`; bgColor = '#10B981'; borderColor = '#059669'; break;
+        case 'error': iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`; bgColor = '#DC2626'; borderColor = '#991B1B'; break;
+        case 'warning': iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M12 9v4"/><circle cx="12" cy="16" r="0.5" fill="white"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`; bgColor = '#F59E0B'; borderColor = '#D97706'; break;
+        case 'info': iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`; bgColor = '#3B82F6'; borderColor = '#2563EB'; break;
+        case 'urgent': iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M12 8v4"/><path d="M12 16h.01"/><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`; bgColor = '#DC2626'; borderColor = '#991B1B'; break;
+        case 'delete': iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`; bgColor = '#EF4444'; borderColor = '#B91C1C'; break;
+        case 'archive': iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`; bgColor = '#7C3AED'; borderColor = '#6D28D9'; break;
+        default: iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`; bgColor = '#10B981'; borderColor = '#059669';
     }
     
     toast.style.cssText = `
@@ -103,13 +177,13 @@ function showToastMessage(message, type = 'success') {
     `;
     
     toast.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center; width: ${isMobile ? '28px' : '32px'}; height: ${isMobile ? '28px' : '32px'}; background: rgba(255,255,255,0.2); border-radius: 50%; font-size: ${isMobile ? '14px' : '18px'}; font-weight: bold; flex-shrink: 0;">
-            ${icon}
+        <div style="display: flex; align-items: center; justify-content: center; width: ${isMobile ? '28px' : '32px'}; height: ${isMobile ? '28px' : '32px'}; background: rgba(255,255,255,0.2); border-radius: 50%; flex-shrink: 0;">
+            ${iconSvg}
         </div>
         <div style="flex: 1; line-height: 1.4; word-break: break-word;">
             ${message}
         </div>
-        <button class="toast-close" style="background: none; border: none; color: white; cursor: pointer; font-size: ${isMobile ? '20px' : '18px'}; padding: ${isMobile ? '8px' : '4px'}; opacity: 0.7; flex-shrink: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        <button class="toast-close" style="background: none; border: none; color: white; cursor: pointer; padding: ${isMobile ? '8px' : '4px'}; opacity: 0.7; flex-shrink: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center;">${Icons.close}</button>
     `;
     
     if (!isMobile) {
@@ -141,6 +215,7 @@ function showToastMessage(message, type = 'success') {
     let duration = isMobile ? 3500 : 3000;
     if (type === 'delete') duration = isMobile ? 4500 : 4000;
     if (type === 'error') duration = isMobile ? 4500 : 4000;
+    if (type === 'archive') duration = isMobile ? 4000 : 3500;
     
     const timeoutId = setTimeout(() => {
         if (toast && toast.parentNode) {
@@ -192,12 +267,12 @@ async function pushNotificationToStudents(title, message, type = 'info', related
             });
 
         if (error) {
-            console.error('❌ Failed to push notification to Supabase:', error);
+            console.error('Failed to push notification to Supabase:', error);
         } else {
-            console.log('✅ Notification pushed to Supabase notifications table:', title);
+            console.log('Notification pushed to Supabase notifications table:', title);
         }
     } catch (err) {
-        console.error('❌ Error pushing notification:', err);
+        console.error('Error pushing notification:', err);
     }
 }
 
@@ -206,7 +281,7 @@ async function requestNotificationPermission() {
     if ('Notification' in window) {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-            console.log('✅ Notification permission granted');
+            console.log('Notification permission granted');
             if (isMobileOrTablet()) {
                 setTimeout(() => {
                     new Notification('Campus Care Admin', {
@@ -218,7 +293,7 @@ async function requestNotificationPermission() {
                 }, 1000);
             }
         } else {
-            console.log('❌ Notification permission denied');
+            console.log('Notification permission denied');
             if (isMobileOrTablet() && permission !== 'denied') {
                 showMobileNotificationPrompt();
             }
@@ -248,7 +323,7 @@ function showMobileNotificationPrompt() {
     `;
     promptDiv.innerHTML = `
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-            <span style="font-size: 24px;">🔔</span>
+            <span style="font-size: 24px;">${Icons.bell}</span>
             <div>
                 <strong style="color: var(--text);">Enable Notifications</strong>
                 <p style="color: var(--muted); font-size: 12px; margin: 4px 0 0;">Get instant alerts for new incidents</p>
@@ -284,7 +359,7 @@ function showMobileFallbackNotification(incident) {
     if (incident) {
         notificationDiv.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 28px;">${isUrgent ? '🚨' : '📋'}</span>
+                <span style="font-size: 28px;">${isUrgent ? Icons.highPriority : Icons.bell}</span>
                 <div style="flex: 1;">
                     <div style="font-weight: bold; margin-bottom: 4px;">${isUrgent ? 'URGENT INCIDENT' : 'New Incident'}</div>
                     <div style="font-size: 13px;">${incident.name || incident.title}</div>
@@ -296,7 +371,7 @@ function showMobileFallbackNotification(incident) {
     } else {
         notificationDiv.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 24px;">🔔</span>
+                <span style="font-size: 24px;">${Icons.bell}</span>
                 <div style="flex: 1;"><div style="font-weight: bold;">Campus Care Alert</div><div style="font-size: 13px;">New incident reported</div></div>
                 <button style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 20px;">View</button>
             </div>
@@ -332,7 +407,7 @@ function sendBrowserNotification(title, body, isUrgent = false) {
 function sendMobileNotification(title, body, isUrgent = false) {
     if (isMobileOrTablet()) {
         const incident = {
-            name: title.replace('🚨 URGENT: ', '').replace('📋 ', ''),
+            name: title.replace('URGENT: ', '').replace('New Incident Reported', ''),
             location: body.split('📍 Location: ')[1]?.split('\n')[0] || 'Unknown',
             priority: isUrgent ? 'high' : 'medium',
             id: Date.now()
@@ -349,18 +424,18 @@ function sendMobileNotification(title, body, isUrgent = false) {
 }
 
 function checkForUrgentReport(incident) {
-    console.log('🔔 Checking for urgent report:', incident);
+    console.log('Checking for urgent report:', incident);
     if (!incident) return;
 
     const isUrgent = incident.priority === 'high' ||
                      incident.priority === 'urgent' ||
                      incident.category === 'security';
 
-    const notificationTitle = isUrgent ? '🚨 URGENT INCIDENT REPORTED' : '📋 New Incident Reported';
-    const notificationBody = `${incident.name || incident.title}\n📍 Location: ${incident.location}\n⚠️ Priority: ${(incident.priority || 'medium').toUpperCase()}`;
+    const notificationTitle = isUrgent ? 'URGENT INCIDENT REPORTED' : 'New Incident Reported';
+    const notificationBody = `${incident.name || incident.title}\n📍 Location: ${incident.location}\nPriority: ${(incident.priority || 'medium').toUpperCase()}`;
 
     addInternalNotification(
-        isUrgent ? '🚨 Urgent Incident' : 'New Incident',
+        isUrgent ? 'Urgent Incident' : 'New Incident',
         `${incident.name || incident.title} at ${incident.location}`,
         isUrgent
     );
@@ -406,7 +481,7 @@ async function notifyStudentOfStatusChange(incident, oldStatus, newStatus) {
 
     if (message) {
         await pushNotificationToStudents(title, message, type, incident.id || null);
-        console.log(`✅ Student notified of status change: ${oldStatus} → ${newStatus}`);
+        console.log(`Student notified of status change: ${oldStatus} → ${newStatus}`);
     }
 }
 
@@ -432,7 +507,7 @@ function updateNotificationBadge() {
     const badge = document.getElementById('notificationBadge');
     if (badge) {
         if (unreadCount > 0) {
-            badge.textContent = urgentCount > 0 ? `🔥${unreadCount}` : (unreadCount > 9 ? '9+' : unreadCount);
+            badge.textContent = urgentCount > 0 ? `!${unreadCount}` : (unreadCount > 9 ? '9+' : unreadCount);
             badge.style.display = 'flex';
             badge.style.background = urgentCount > 0 ? '#DC2626' : 'var(--red)';
             badge.style.animation = urgentCount > 0 ? 'pulse 0.5s ease infinite' : 'none';
@@ -462,10 +537,7 @@ function updateNotificationDropdown() {
                 <button class="clear-all-dropdown" onclick="window.clearAllNotifications()">Clear all</button>
             </div>
             <div class="notification-dropdown-empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                </svg>
+                ${Icons.noNotifications}
                 <p>No notifications yet</p>
                 <p style="font-size: 11px; margin-top: 4px;">New incident reports will appear here</p>
             </div>
@@ -481,7 +553,7 @@ function updateNotificationDropdown() {
         <div class="notification-dropdown-list">
             ${notifications.slice(0, 15).map(notif => `
                 <div class="notification-dropdown-item ${!notif.read ? 'unread' : ''} ${notif.isUrgent ? 'urgent' : ''}" onclick="window.markNotificationRead(${notif.id})">
-                    <div class="notification-dropdown-title">${notif.isUrgent ? '🚨 ' : '📋 '}${escape(notif.title)}</div>
+                    <div class="notification-dropdown-title">${notif.isUrgent ? Icons.highPriority : Icons.bell} ${escape(notif.title)}</div>
                     <div class="notification-dropdown-message">${escape(notif.message)}</div>
                     <div class="notification-dropdown-time">${getTimeAgo(new Date(notif.timestamp))}</div>
                 </div>
@@ -548,6 +620,10 @@ function initDarkMode() {
         }
     }
     if (toggle) {
+        toggle.innerHTML = `
+            <div class="sun-icon" style="display: flex;">${Icons.sun}</div>
+            <div class="moon-icon" style="display: none;">${Icons.moon}</div>
+        `;
         toggle.addEventListener('click', () => {
             document.body.classList.toggle('dark-mode');
             const isDark = document.body.classList.contains('dark-mode');
@@ -555,8 +631,8 @@ function initDarkMode() {
             const sunIcon = toggle.querySelector('.sun-icon');
             const moonIcon = toggle.querySelector('.moon-icon');
             if (sunIcon && moonIcon) {
-                sunIcon.style.display = isDark ? 'none' : 'block';
-                moonIcon.style.display = isDark ? 'block' : 'none';
+                sunIcon.style.display = isDark ? 'none' : 'flex';
+                moonIcon.style.display = isDark ? 'flex' : 'none';
             }
         });
     }
@@ -610,13 +686,13 @@ async function loadIncidentsFromSupabase() {
                 image_url: r.image_url || null,
                 timestamp: new Date(r.created_at),
                 resolved_at: r.resolved_at || null,
-                is_anonymous: r.is_anonymous || false
+                is_anonymous: r.is_anonymous || false,
+                is_archived: r.is_archived || false
             }));
             saveToLocalStorage();
         } else {
             allIncidents = [];
         }
-        await checkAndDeleteOldResolved();
         updateAll();
     } catch (error) {
         console.error('Error loading from Supabase:', error);
@@ -641,12 +717,12 @@ async function loadFromLocalStorage() {
             image_url: r.imageUrl || r.image_url || null,
             timestamp: new Date(r.timestamp),
             resolved_at: r.resolved_at || null,
-            is_anonymous: r.is_anonymous
+            is_anonymous: r.is_anonymous,
+            is_archived: r.is_archived || false
         }));
     } else {
         allIncidents = [];
     }
-    await checkAndDeleteOldResolved();
     updateAll();
 }
 
@@ -659,7 +735,7 @@ function setupRealtimeSubscription() {
         .on('postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'incident' },
             (payload) => {
-                console.log('🆕 NEW INCIDENT INSERTED!', payload.new);
+                console.log('NEW INCIDENT INSERTED!', payload.new);
                 const newIncident = {
                     id: payload.new.id,
                     name: payload.new.title || 'Untitled',
@@ -672,7 +748,8 @@ function setupRealtimeSubscription() {
                     description: payload.new.description || '',
                     image_url: payload.new.image_url || null,
                     timestamp: new Date(payload.new.created_at),
-                    is_anonymous: payload.new.is_anonymous || false
+                    is_anonymous: payload.new.is_anonymous || false,
+                    is_archived: payload.new.is_archived || false
                 };
                 checkForUrgentReport(newIncident);
                 allIncidents.unshift(newIncident);
@@ -683,7 +760,7 @@ function setupRealtimeSubscription() {
         .on('postgres_changes',
             { event: 'UPDATE', schema: 'public', table: 'incident' },
             (payload) => {
-                console.log('🔄 Incident UPDATED:', payload.new.id);
+                console.log('Incident UPDATED:', payload.new.id);
                 if (payload.old?.status !== payload.new?.status) {
                     const updatedIncident = {
                         id: payload.new.id,
@@ -704,7 +781,8 @@ function setupRealtimeSubscription() {
                         ...allIncidents[index],
                         status: payload.new.status,
                         updated_at: payload.new.updated_at,
-                        resolved_at: payload.new.resolved_at
+                        resolved_at: payload.new.resolved_at,
+                        is_archived: payload.new.is_archived || false
                     };
                     updateAll();
                 }
@@ -713,7 +791,7 @@ function setupRealtimeSubscription() {
         .on('postgres_changes',
             { event: 'DELETE', schema: 'public', table: 'incident' },
             (payload) => {
-                console.log('🗑️ Incident DELETED');
+                console.log('Incident DELETED');
                 allIncidents = allIncidents.filter(i => String(i.id) !== String(payload.old.id));
                 updateAll();
                 addInternalNotification('Incident Deleted', 'An incident has been removed from the system', false);
@@ -723,7 +801,7 @@ function setupRealtimeSubscription() {
         .subscribe((status) => {
             console.log('Realtime subscription status:', status);
             if (status === 'SUBSCRIBED') {
-                console.log('%c✅ REAL-TIME ACTIVE!', 'color: green; font-size: 14px; font-weight: bold');
+                console.log('REAL-TIME ACTIVE!');
             } else if (status === 'CHANNEL_WAITING') {
                 startPollingFallback();
             }
@@ -754,7 +832,8 @@ function startPollingFallback() {
                         description: latest.description || '',
                         image_url: latest.image_url || null,
                         timestamp: new Date(latest.created_at),
-                        is_anonymous: latest.is_anonymous || false
+                        is_anonymous: latest.is_anonymous || false,
+                        is_archived: latest.is_archived || false
                     };
                     checkForUrgentReport(newIncident);
                     allIncidents.unshift(newIncident);
@@ -781,50 +860,61 @@ async function updateIncidentStatus(incidentId, newStatus, resolvedAt = null) {
     }
 }
 
+// ========== ARCHIVE INCIDENT ==========
+async function archiveIncident(incidentId) {
+    try {
+        const updateData = {
+            is_archived: true,
+            updated_at: new Date().toISOString()
+        };
+        const { error } = await supabase.from('incident').update(updateData).eq('id', incidentId);
+        if (error) { console.error('Error archiving incident:', error); return false; }
+        return true;
+    } catch (error) {
+        console.error('Error archiving incident:', error);
+        return false;
+    }
+}
+
+// ========== UNARCHIVE INCIDENT ==========
+async function unarchiveIncident(incidentId) {
+    try {
+        const updateData = {
+            is_archived: false,
+            updated_at: new Date().toISOString()
+        };
+        const { error } = await supabase.from('incident').update(updateData).eq('id', incidentId);
+        if (error) { console.error('Error unarchiving incident:', error); return false; }
+        return true;
+    } catch (error) {
+        console.error('Error unarchiving incident:', error);
+        return false;
+    }
+}
+
 function saveToLocalStorage() {
     isSavingToStorage = true;
     const toStore = allIncidents.map(i => ({
         id: i.id, title: i.name, location: i.location, category: i.category,
         priority: i.priority, status: i.status, studentName: i.reporter,
         description: i.description, timestamp: i.timestamp, imageUrl: i.image_url,
-        studentIdNumber: i.student_id, resolved_at: i.resolved_at, is_anonymous: i.is_anonymous
+        studentIdNumber: i.student_id, resolved_at: i.resolved_at,
+        is_anonymous: i.is_anonymous, is_archived: i.is_archived
     }));
     localStorage.setItem('campus_care_reports', JSON.stringify(toStore));
     setTimeout(() => { isSavingToStorage = false; }, 0);
 }
 
-async function checkAndDeleteOldResolved() {
-    const now = new Date();
-    const toDelete = [];
-    const toKeep = allIncidents.filter(incident => {
-        if (incident.status !== 'resolved') return true;
-        const resolvedTime = new Date(incident.resolved_at || incident.timestamp);
-        const hoursSinceResolved = (now - resolvedTime) / (1000 * 60 * 60);
-        if (hoursSinceResolved < RESOLVED_RETENTION_HOURS) return true;
-        toDelete.push(incident);
-        return false;
-    });
-    if (toDelete.length === 0) return;
-    for (const incident of toDelete) {
-        const { error } = await supabase.from('incident').delete().eq('id', incident.id);
-        if (!error) addInternalNotification('Incident Auto-Deleted', `"${incident.name}" was automatically deleted after 24 hours.`, false);
-    }
-    allIncidents = toKeep;
-    saveToLocalStorage();
-}
-
-function startAutoCleanupScheduler() {
-    checkAndDeleteOldResolved();
-    setInterval(async () => { await checkAndDeleteOldResolved(); updateAll(); }, 3600000);
-}
-
 function updateAll() { updateStats(); updateChart(); updateTopCategories(); renderIncidents(); renderMobileCards(); }
 
 function updateStats() {
-    const total = allIncidents.length;
-    const active = allIncidents.filter(i => i.status !== 'resolved').length;
-    const resolved = allIncidents.filter(i => i.status === 'resolved').length;
+    const activeIncidents = allIncidents.filter(i => !i.is_archived);
+    const total = activeIncidents.length;
+    const active = activeIncidents.filter(i => i.status !== 'resolved').length;
+    const resolved = activeIncidents.filter(i => i.status === 'resolved').length;
+    const archived = allIncidents.filter(i => i.is_archived).length;
     const rate = total ? Math.round((resolved / total) * 100) : 0;
+
     const totalReportsEl = document.getElementById('totalReports');
     const activeReportsEl = document.getElementById('activeReports');
     const resolvedRateEl = document.getElementById('resolvedRate');
@@ -833,8 +923,13 @@ function updateStats() {
     if (activeReportsEl) activeReportsEl.textContent = active;
     if (resolvedRateEl) resolvedRateEl.textContent = rate + '%';
     if (avgResolutionEl) avgResolutionEl.textContent = total ? '42h' : '—';
+
+    // Update archived count badge if element exists
+    const archivedCountEl = document.getElementById('archivedCount');
+    if (archivedCountEl) archivedCountEl.textContent = archived;
+
     const cats = { security: 0, maintenance: 0, janitorial: 0, facilities: 0 };
-    allIncidents.forEach(i => { if (cats[i.category] !== undefined) cats[i.category]++; });
+    activeIncidents.forEach(i => { if (cats[i.category] !== undefined) cats[i.category]++; });
     const securityEl = document.getElementById('securityCount');
     const maintenanceEl = document.getElementById('maintenanceCount');
     const janitorialEl = document.getElementById('janitorialCount');
@@ -846,8 +941,9 @@ function updateStats() {
 }
 
 function updateTopCategories() {
+    const activeIncidents = allIncidents.filter(i => !i.is_archived);
     const cats = { security: 0, maintenance: 0, janitorial: 0, facilities: 0 };
-    allIncidents.forEach(i => { if (cats[i.category] !== undefined) cats[i.category]++; });
+    activeIncidents.forEach(i => { if (cats[i.category] !== undefined) cats[i.category]++; });
     const topSecurity = document.getElementById('topSecurity');
     const topMaintenance = document.getElementById('topMaintenance');
     const topJanitorial = document.getElementById('topJanitorial');
@@ -868,7 +964,8 @@ function updateChart() {
         months.push(monthName);
         monthlyData[monthName] = 0;
     }
-    allIncidents.forEach(inc => {
+    // Only count non-archived in chart
+    allIncidents.filter(inc => !inc.is_archived).forEach(inc => {
         const monthName = new Date(inc.timestamp).toLocaleString('default', { month: 'short' });
         if (monthlyData[monthName] !== undefined) monthlyData[monthName]++;
     });
@@ -903,7 +1000,17 @@ function updateChart() {
 
 function getFiltered() {
     let filtered = [...allIncidents];
-    if (currentFilter !== 'all') filtered = filtered.filter(i => i.status === currentFilter);
+
+    // 'archived' filter shows only archived; all others hide archived
+    if (currentFilter === 'archived') {
+        filtered = filtered.filter(i => i.is_archived);
+    } else {
+        filtered = filtered.filter(i => !i.is_archived);
+        if (currentFilter !== 'all') {
+            filtered = filtered.filter(i => i.status === currentFilter);
+        }
+    }
+
     return filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 }
 
@@ -911,20 +1018,60 @@ function renderIncidents() {
     const tbody = document.getElementById('incidentsTableBody');
     if (!tbody) return;
     const filtered = getFiltered();
-    if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:60px;">📭 No incidents found</td></tr>`; return; }
+    if (filtered.length === 0) {
+        const emptyMsg = currentFilter === 'archived' ? 'No archived incidents' : 'No incidents found';
+        tbody.innerHTML = `</table><td colspan="7" style="text-align:center;padding:60px;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+                ${Icons.noNotifications}
+                <p style="color:var(--muted);">${emptyMsg}</p>
+            </div>
+        </td></tr>`;
+        return;
+    }
+    
     tbody.innerHTML = filtered.map(inc => {
         const categoryColor = getCategoryColor(inc.category);
         const categoryBg = `${categoryColor}15`;
+        const isArchived = inc.is_archived;
+        
+        const incidentName = inc.name && inc.name.trim() !== '' ? escape(inc.name) : 'Unnamed Incident';
+        const incidentLocation = inc.location && inc.location.trim() !== '' ? escape(inc.location) : 'No location provided';
+        const incidentCategory = inc.category && inc.category.trim() !== '' ? inc.category : 'maintenance';
+        const incidentStatus = inc.status && inc.status.trim() !== '' ? inc.status : 'pending';
+        const incidentReporter = inc.is_anonymous === true ? 'Anonymous' : (inc.reporter && inc.reporter.trim() !== '' ? escape(inc.reporter) : 'Unknown Student');
+        const incidentStudentId = inc.is_anonymous === true ? 'Hidden' : (inc.student_id && inc.student_id.trim() !== '' ? inc.student_id : 'N/A');
+        const incidentDate = inc.timestamp ? getTimeAgo(inc.timestamp) : 'Unknown date';
+        
         return `
-            <tr data-id="${inc.id}">
-                <td><div style="display:flex;align-items:center;gap:12px;"><div style="width:44px;height:44px;border-radius:12px;background:${categoryBg};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">${getIcon(inc.category)}</div><div><strong style="color:var(--text);font-size:14px;display:block;margin-bottom:4px;">${escape(inc.name)}</strong><span style="font-size:11px;color:var(--muted);">${escape(inc.location)}</span></div></div></td>
-                <td><span class="badge b-${inc.category}">${inc.category}</span></td>
-                <td><span class="badge b-${inc.priority}">${inc.priority}</span></td>
-                <td><span class="badge b-${inc.status === 'in-progress' ? 'inprogress' : inc.status}">${inc.status}</span></td>
-                <td style="color:var(--text);">${inc.is_anonymous === true ? 'Anonymous' : escape(inc.reporter)}</td>
-                <td style="color:var(--text);">${inc.is_anonymous === true ? 'Hidden' : inc.student_id}</td>
-                <td style="color:var(--muted);">${getTimeAgo(inc.timestamp)}</td>
-                <td><div class="action-btns"><button class="action-btn" onclick="window.openModal('${inc.id}')">👁️</button><button class="action-btn del" onclick="window.deleteIncident('${inc.id}')">🗑️</button></div></td>
+            <tr data-id="${inc.id}" style="${isArchived ? 'opacity: 0.7;' : ''}">
+                <td>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:${isArchived ? 'var(--bg)' : categoryBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;${isArchived ? 'color:var(--muted)' : ''}">
+                            ${isArchived ? Icons.archive : getCategoryIcon(incidentCategory)}
+                        </div>
+                        <div>
+                            <strong style="color:var(--text);font-size:14px;display:block;margin-bottom:4px;">${incidentName}${isArchived ? ' <span style="font-size:10px;background:var(--bg);color:var(--muted);padding:2px 6px;border-radius:20px;font-weight:500;vertical-align:middle;">Archived</span>' : ''}</strong>
+                            <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;">${Icons.location} ${incidentLocation}</span>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="badge b-${incidentCategory}">${incidentCategory}</span></td>
+                <td><span class="badge b-${incidentStatus === 'in-progress' ? 'inprogress' : incidentStatus}" style="display:flex;align-items:center;gap:4px;width:fit-content;">${getStatusIcon(incidentStatus)} ${incidentStatus === 'in-progress' ? 'In Progress' : incidentStatus}</span></td>
+                <td style="color:var(--text);">${incidentReporter}</td>
+                <td style="color:var(--text);">${incidentStudentId}</td>
+                <td style="color:var(--muted);white-space:nowrap;">
+                    <span style="display:inline-flex;align-items:center;gap:4px;vertical-align:middle;">${Icons.calendar} ${incidentDate}</span>
+                </td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn" onclick="window.openModal('${inc.id}')" title="View">${Icons.view}</button>
+                        ${isArchived
+                            ? `<button class="action-btn" onclick="window.unarchiveIncidentConfirm('${inc.id}')" title="Unarchive" style="color:var(--teal);">${Icons.archive}</button>`
+                            : `<button class="action-btn" onclick="window.archiveIncidentConfirm('${inc.id}')" title="Archive" style="color:var(--amber);">${Icons.archive}</button>`
+                        }
+                        <button class="action-btn del" onclick="window.deleteIncident('${inc.id}')" title="Delete">${Icons.delete}</button>
+                    </div>
+                </td>
             </tr>
         `;
     }).join('');
@@ -934,25 +1081,158 @@ function renderMobileCards() {
     const container = document.getElementById('mobileCards');
     if (!container) return;
     const filtered = getFiltered();
-    if (filtered.length === 0) { container.innerHTML = `<div style="text-align:center;padding:60px 20px;background:var(--surface);border-radius:20px;"><div style="font-size:48px;margin-bottom:12px;">📭</div><p style="color:var(--text);font-weight:500;">No incidents found</p></div>`; return; }
+    if (filtered.length === 0) {
+        const emptyMsg = currentFilter === 'archived' ? 'No archived incidents' : 'No incidents found';
+        container.innerHTML = `<div style="text-align:center;padding:60px 20px;background:var(--surface);border-radius:20px;"><div style="font-size:48px;margin-bottom:12px;">📭</div><p style="color:var(--text);font-weight:500;">${emptyMsg}</p></div>`;
+        return;
+    }
     container.innerHTML = filtered.map(inc => {
         const categoryColor = getCategoryColor(inc.category);
         const categoryBg = `${categoryColor}15`;
         const priorityClass = inc.priority === 'high' ? 'priority-high' : (inc.priority === 'medium' ? 'priority-medium' : 'priority-low');
+        const isArchived = inc.is_archived;
         return `
-            <div class="m-card ${priorityClass}" data-id="${inc.id}">
-                <div class="m-card-header"><div class="m-card-icon" style="background:${categoryBg};color:${categoryColor};">${getIcon(inc.category)}</div><div class="m-card-info"><div class="m-card-title">${escape(inc.name)}</div><div class="m-card-location">${escape(inc.location)}</div></div></div>
-                <div class="m-card-body">
-                    <div class="m-card-field"><div class="m-field-label">📂 CATEGORY</div><div class="m-field-value"><span class="badge b-${inc.category}">${inc.category}</span></div></div>
-                    <div class="m-card-field"><div class="m-field-label">⚡ PRIORITY</div><div class="m-field-value"><span class="badge b-${inc.priority}">${inc.priority}</span></div></div>
-                    <div class="m-card-field"><div class="m-field-label">📌 STATUS</div><div class="m-field-value"><span class="badge b-${inc.status === 'in-progress' ? 'inprogress' : inc.status}">${inc.status}</span></div></div>
-                    <div class="m-card-field"><div class="m-field-label">👤 REPORTER</div><div class="m-field-value">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</div></div>
+            <div class="m-card ${priorityClass}" data-id="${inc.id}" style="${isArchived ? 'opacity:0.75;border:1px dashed var(--border);' : ''}">
+                <div class="m-card-header">
+                    <div class="m-card-icon" style="background:${isArchived ? 'var(--bg)' : categoryBg};color:${isArchived ? 'var(--muted)' : categoryColor};">${isArchived ? Icons.archive : getCategoryIcon(inc.category)}</div>
+                    <div class="m-card-info">
+                        <div class="m-card-title">${escape(inc.name)}${isArchived ? ' <span style="font-size:10px;background:var(--bg);color:var(--muted);padding:2px 6px;border-radius:20px;font-weight:500;">Archived</span>' : ''}</div>
+                        <div class="m-card-location">${Icons.location} ${escape(inc.location)}</div>
+                    </div>
                 </div>
-                <div class="m-card-footer"><div class="m-timestamp">${getTimeAgo(inc.timestamp)}</div><div class="m-card-actions"><button class="action-btn" onclick="window.openModal('${inc.id}')" title="View Details">👁️</button><button class="action-btn del" onclick="window.deleteIncident('${inc.id}')" title="Delete">🗑️</button></div></div>
+                <div class="m-card-body">
+                    <div class="m-card-field"><div class="m-field-label">CATEGORY</div><div class="m-field-value"><span class="badge b-${inc.category}">${inc.category}</span></div></div>
+                    <div class="m-card-field"><div class="m-field-label">PRIORITY</div><div class="m-field-value"><span class="badge b-${inc.priority}" style="display:flex;align-items:center;gap:4px;">${getPriorityIcon(inc.priority)} ${inc.priority}</span></div></div>
+                    <div class="m-card-field"><div class="m-field-label">STATUS</div><div class="m-field-value"><span class="badge b-${inc.status === 'in-progress' ? 'inprogress' : inc.status}" style="display:flex;align-items:center;gap:4px;">${getStatusIcon(inc.status)} ${inc.status}</span></div></div>
+                    <div class="m-card-field"><div class="m-field-label">REPORTER</div><div class="m-field-value">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</div></div>
+                </div>
+                <div class="m-card-footer">
+                    <div class="m-timestamp">${Icons.calendar} ${getTimeAgo(inc.timestamp)}</div>
+                    <div class="m-card-actions">
+                        <button class="action-btn" onclick="window.openModal('${inc.id}')" title="View Details">${Icons.view}</button>
+                        ${isArchived
+                            ? `<button class="action-btn" onclick="window.unarchiveIncidentConfirm('${inc.id}')" title="Unarchive" style="color:var(--teal);">${Icons.archive}</button>`
+                            : `<button class="action-btn" onclick="window.archiveIncidentConfirm('${inc.id}')" title="Archive" style="color:var(--amber);">${Icons.archive}</button>`
+                        }
+                        <button class="action-btn del" onclick="window.deleteIncident('${inc.id}')" title="Delete">${Icons.delete}</button>
+                    </div>
+                </div>
             </div>
         `;
     }).join('');
 }
+
+// ============ ARCHIVE CONFIRMATION ==========
+window.archiveIncidentConfirm = async function(id) {
+    const incident = allIncidents.find(i => String(i.id) === String(id));
+    if (!incident) return;
+
+    const isMobile = window.innerWidth <= 768;
+
+    const confirmModal = document.createElement('div');
+    confirmModal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+        z-index: 20000; display: flex; align-items: center; justify-content: center;
+        animation: fadeInModal 0.2s ease; padding: ${isMobile ? '16px' : '0'};
+    `;
+
+    confirmModal.innerHTML = `
+        <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+            <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(217, 119, 6, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'}; color: #D97706;">
+                ${Icons.archive}
+            </div>
+            <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Archive Incident?</h3>
+            <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">"<strong style="color: var(--text);">${escape(incident.name)}</strong>" will be moved to the archive. You can restore it anytime.</p>
+            <div style="display: flex; gap: 12px; flex-direction: ${isMobile ? 'column' : 'row'};">
+                <button id="archiveCancelBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: var(--text); cursor: pointer; min-height: 48px;">Cancel</button>
+                <button id="archiveConfirmBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: #D97706; border: none; border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: white; cursor: pointer; min-height: 48px;">Archive</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(confirmModal);
+    document.body.style.overflow = 'hidden';
+
+    const cleanup = () => { confirmModal.remove(); document.body.style.overflow = ''; };
+
+    document.getElementById('archiveCancelBtn').onclick = () => {
+        cleanup();
+        showToastMessage('Archive cancelled', 'info');
+    };
+
+    document.getElementById('archiveConfirmBtn').onclick = async () => {
+        cleanup();
+        showToastMessage('Archiving incident...', 'info');
+        const success = await archiveIncident(id);
+        if (success) {
+            const idx = allIncidents.findIndex(i => String(i.id) === String(id));
+            if (idx !== -1) allIncidents[idx].is_archived = true;
+            saveToLocalStorage();
+            updateAll();
+            showToastMessage(`"${incident.name}" has been archived.`, 'archive');
+            addInternalNotification('Incident Archived', `"${incident.name}" was moved to the archive`, false);
+        } else {
+            showToastMessage('Failed to archive. Please try again.', 'error');
+        }
+    };
+};
+
+// ============ UNARCHIVE CONFIRMATION ==========
+window.unarchiveIncidentConfirm = async function(id) {
+    const incident = allIncidents.find(i => String(i.id) === String(id));
+    if (!incident) return;
+
+    const isMobile = window.innerWidth <= 768;
+
+    const confirmModal = document.createElement('div');
+    confirmModal.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+        z-index: 20000; display: flex; align-items: center; justify-content: center;
+        animation: fadeInModal 0.2s ease; padding: ${isMobile ? '16px' : '0'};
+    `;
+
+    confirmModal.innerHTML = `
+        <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
+            <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(29, 158, 117, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'}; color: #1D9E75;">
+                ${Icons.archive}
+            </div>
+            <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Restore Incident?</h3>
+            <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">"<strong style="color: var(--text);">${escape(incident.name)}</strong>" will be restored to the active incidents list.</p>
+            <div style="display: flex; gap: 12px; flex-direction: ${isMobile ? 'column' : 'row'};">
+                <button id="unarchiveCancelBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: var(--text); cursor: pointer; min-height: 48px;">Cancel</button>
+                <button id="unarchiveConfirmBtn" style="flex: 1; padding: ${isMobile ? '14px' : '12px'}; background: #1D9E75; border: none; border-radius: 40px; font-size: ${isMobile ? '15px' : '14px'}; font-weight: 600; color: white; cursor: pointer; min-height: 48px;">Restore</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(confirmModal);
+    document.body.style.overflow = 'hidden';
+
+    const cleanup = () => { confirmModal.remove(); document.body.style.overflow = ''; };
+
+    document.getElementById('unarchiveCancelBtn').onclick = () => {
+        cleanup();
+        showToastMessage('Restore cancelled', 'info');
+    };
+
+    document.getElementById('unarchiveConfirmBtn').onclick = async () => {
+        cleanup();
+        showToastMessage('Restoring incident...', 'info');
+        const success = await unarchiveIncident(id);
+        if (success) {
+            const idx = allIncidents.findIndex(i => String(i.id) === String(id));
+            if (idx !== -1) allIncidents[idx].is_archived = false;
+            saveToLocalStorage();
+            updateAll();
+            showToastMessage(`"${incident.name}" has been restored.`, 'success');
+            addInternalNotification('Incident Restored', `"${incident.name}" was restored from the archive`, false);
+        } else {
+            showToastMessage('Failed to restore. Please try again.', 'error');
+        }
+    };
+};
 
 // ============ MODAL FUNCTIONS ==========
 window.openModal = function(id) {
@@ -975,31 +1255,37 @@ window.openModal = function(id) {
     if (inc.image_url && inc.image_url !== 'null' && inc.image_url !== '') {
         imageHtml = `<div class="modal-image-section" style="text-align:center;margin-bottom:12px;"><img src="${escape(inc.image_url)}" alt="Incident Image" style="max-width:100%;max-height:${isMobile ? '120px' : '180px'};border-radius:12px;object-fit:cover;cursor:pointer;" onclick="window.openImageZoom('${escape(inc.image_url)}')"></div>`;
     } else {
-        imageHtml = `<div class="modal-image-section no-image" style="text-align:center;padding:${isMobile ? '16px' : '24px'};background:var(--bg);border-radius:12px;margin-bottom:12px;"><svg width="${isMobile ? '32' : '40'}" height="${isMobile ? '32' : '40'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><p style="margin-top:8px;font-size:${isMobile ? '11px' : '12px'};color:var(--muted);">No image attached</p></div>`;
+        imageHtml = `<div class="modal-image-section no-image" style="text-align:center;padding:${isMobile ? '16px' : '24px'};background:var(--bg);border-radius:12px;margin-bottom:12px;">${Icons.noImage}<p style="margin-top:8px;font-size:${isMobile ? '11px' : '12px'};color:var(--muted);">No image attached</p></div>`;
     }
+
+    // Archive action row in modal footer
+    const archiveFooterBtn = inc.is_archived
+        ? `<button onclick="window.unarchiveIncidentConfirm('${inc.id}'); closeModal();" style="padding: ${isMobile ? '6px 16px' : '8px 20px'}; background: #1D9E75; color: white; border: none; border-radius: 30px; cursor: pointer; font-family: inherit; font-size: ${isMobile ? '11px' : '12px'}; font-weight: 600;">Restore</button>`
+        : `<button onclick="window.archiveIncidentConfirm('${inc.id}'); closeModal();" style="padding: ${isMobile ? '6px 16px' : '8px 20px'}; background: #D97706; color: white; border: none; border-radius: 30px; cursor: pointer; font-family: inherit; font-size: ${isMobile ? '11px' : '12px'}; font-weight: 600;">Archive</button>`;
     
     modal.innerHTML = `
         <div class="modal-container" style="background: var(--surface); border-radius: ${isMobile ? '16px' : '20px'}; width: 90%; max-width: ${isMobile ? '400px' : '500px'}; max-height: ${isMobile ? '75vh' : '85vh'}; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px var(--shadow-lg); animation: modalSlideIn 0.3s ease;">
             <div class="modal-header" style="padding: ${isMobile ? '12px 16px' : '16px 20px'}; background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: white; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 10; flex-shrink: 0;">
-                <h3 style="font-size: ${isMobile ? '15px' : '18px'}; font-weight: 700; margin: 0;">📋 Incident Details</h3>
-                <button class="modal-close" onclick="closeModal()" style="background: none; border: none; font-size: ${isMobile ? '22px' : '24px'}; cursor: pointer; color: white; opacity: 0.8; transition: opacity 0.2s; line-height: 1;">&times;</button>
+                <h3 style="font-size: ${isMobile ? '15px' : '18px'}; font-weight: 700; margin: 0;">Incident Details${inc.is_archived ? ' <span style="font-size:11px;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:20px;">Archived</span>' : ''}</h3>
+                <button class="modal-close" onclick="closeModal()" style="background: none; border: none; cursor: pointer; color: white; opacity: 0.8; transition: opacity 0.2s; line-height: 1; padding: 4px;">${Icons.close}</button>
             </div>
             <div class="modal-body" style="padding: ${isMobile ? '12px 14px' : '16px 20px'}; overflow-y: auto; flex: 1;">
                 ${imageHtml}
                 <div class="modal-info-section" style="display: flex; flex-direction: column; gap: ${isMobile ? '8px' : '12px'};">
                     <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Title:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${escape(inc.name)}</span></div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Location:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">📍 ${escape(inc.location)}</span></div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Category:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.category}" style="padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'};">${categoryLabels[inc.category] || inc.category}</span></span></div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Priority:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.priority}" style="padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'};">${priorityLabels[inc.priority] || inc.priority}</span></span></div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Status:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><select id="modalStatus" class="modal-status-select" style="padding: ${isMobile ? '4px 10px' : '6px 12px'}; border: 1px solid var(--border); border-radius: 25px; font-family: inherit; font-size: ${isMobile ? '10px' : '12px'}; background: var(--surface); cursor: pointer; min-width: ${isMobile ? '100px' : '130px'}; color: var(--text);"><option value="pending" ${inc.status === 'pending' ? 'selected' : ''}>⏱️ Pending</option><option value="in-progress" ${inc.status === 'in-progress' ? 'selected' : ''}>⚙️ In Progress</option><option value="resolved" ${inc.status === 'resolved' ? 'selected' : ''}>✓ Resolved</option></select></span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Location:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${Icons.location} ${escape(inc.location)}</span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Category:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.category}" style="display:inline-flex;align-items:center;gap:4px;padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'};">${getCategoryIcon(inc.category)} ${categoryLabels[inc.category] || inc.category}</span></span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Priority:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><span class="badge b-${inc.priority}" style="display:inline-flex;align-items:center;gap:4px;padding: ${isMobile ? '2px 8px' : '4px 10px'}; border-radius: 20px; font-size: ${isMobile ? '9px' : '11px'};">${getPriorityIcon(inc.priority)} ${priorityLabels[inc.priority] || inc.priority}</span></span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Status:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;"><select id="modalStatus" class="modal-status-select" style="padding: ${isMobile ? '4px 10px' : '6px 12px'}; border: 1px solid var(--border); border-radius: 25px; font-family: inherit; font-size: ${isMobile ? '10px' : '12px'}; background: var(--surface); cursor: pointer; min-width: ${isMobile ? '100px' : '130px'}; color: var(--text);"><option value="pending" ${inc.status === 'pending' ? 'selected' : ''}>${Icons.pending} Pending</option><option value="in-progress" ${inc.status === 'in-progress' ? 'selected' : ''}>${Icons.inProgress} In Progress</option><option value="resolved" ${inc.status === 'resolved' ? 'selected' : ''}>${Icons.resolved} Resolved</option></select></span></div>
                     <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Reporter:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${inc.is_anonymous === true ? 'Anonymous Reporter' : escape(inc.reporter)}</span></div>
                     <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Student ID:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${inc.is_anonymous === true ? 'Hidden' : inc.student_id}</span></div>
-                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Date:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">🕐 ${new Date(inc.timestamp).toLocaleString()}</span></div>
+                    <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'}; border-bottom: 1px solid var(--border);"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Date:</span><span class="info-value" style="flex: 1; color: var(--text); font-size: ${isMobile ? '11px' : '13px'}; font-weight: 500;">${Icons.calendar} ${new Date(inc.timestamp).toLocaleString()}</span></div>
                     <div class="info-row" style="display: flex; flex-wrap: wrap; padding: ${isMobile ? '6px 0' : '8px 0'};"><span class="info-label" style="font-weight: 600; color: var(--muted); width: ${isMobile ? '70px' : '85px'}; font-size: ${isMobile ? '9px' : '10px'}; text-transform: uppercase;">Description:</span><span class="info-value description-text" style="flex: 1; color: var(--text); font-size: ${isMobile ? '10px' : '12px'}; font-weight: 500; background: var(--bg); padding: ${isMobile ? '8px 10px' : '10px 12px'}; border-radius: 10px; line-height: 1.4;">${escape(inc.description || 'No description provided')}</span></div>
                 </div>
             </div>
             <div class="modal-footer" style="padding: ${isMobile ? '10px 14px' : '12px 20px'}; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: var(--surface); position: sticky; bottom: 0; flex-shrink: 0;">
                 <button class="btn-cancel" onclick="closeModal()" style="padding: ${isMobile ? '6px 16px' : '8px 20px'}; background: var(--bg); border: 1px solid var(--border); border-radius: 30px; cursor: pointer; font-family: inherit; font-size: ${isMobile ? '11px' : '12px'}; font-weight: 500; transition: background 0.2s; color: var(--text);">Cancel</button>
+                ${archiveFooterBtn}
                 <button class="btn-save" onclick="saveStatus()" style="padding: ${isMobile ? '6px 16px' : '8px 20px'}; background: var(--teal); color: white; border: none; border-radius: 30px; cursor: pointer; font-family: inherit; font-size: ${isMobile ? '11px' : '12px'}; font-weight: 600; transition: all 0.2s;">Save Changes</button>
             </div>
         </div>
@@ -1033,9 +1319,9 @@ window.saveStatus = async function() {
         let resolvedAt = null;
         if (newStatus === 'resolved' && oldStatus !== 'resolved') {
             resolvedAt = new Date().toISOString();
-            showToastMessage(`✓ Marked as RESOLVED. Will be auto-deleted after ${RESOLVED_RETENTION_HOURS} hours.`);
+            showToastMessage(`Marked as RESOLVED. Incident is now resolved and can be archived manually.`);
         } else {
-            showToastMessage(`✓ Status updated to ${newStatus}`);
+            showToastMessage(`Status updated to ${newStatus}`);
         }
         incident.status = newStatus;
         incident.resolved_at = resolvedAt;
@@ -1046,7 +1332,7 @@ window.saveStatus = async function() {
             saveToLocalStorage();
             updateAll();
         } else {
-            showToastMessage('❌ Failed to update status. Please try again.', 'error');
+            showToastMessage('Failed to update status. Please try again.', 'error');
             incident.status = oldStatus;
             incident.resolved_at = null;
             updateAll();
@@ -1055,7 +1341,7 @@ window.saveStatus = async function() {
     closeModal();
 };
 
-// ========== IMPROVED DELETE INCIDENT WITH CONFIRMATION MODAL ==========
+// ========== DELETE INCIDENT WITH CONFIRMATION MODAL ==========
 window.deleteIncident = async function(id) {
     const incident = allIncidents.find(i => String(i.id) === String(id));
     if (!incident) return;
@@ -1082,11 +1368,7 @@ window.deleteIncident = async function(id) {
     confirmModal.innerHTML = `
         <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
             <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(220, 38, 38, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'};">
-                <svg width="${isMobile ? '28' : '32'}" height="${isMobile ? '28' : '32'}" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    <line x1="10" y1="11" x2="10" y2="17"/>
-                    <line x1="14" y1="11" x2="14" y2="17"/>
-                </svg>
+                ${Icons.delete}
             </div>
             <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Delete Incident?</h3>
             <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">"<strong style="color: var(--text);">${escape(incident.name)}</strong>" will be permanently deleted. This action cannot be undone.</p>
@@ -1122,11 +1404,11 @@ window.deleteIncident = async function(id) {
             saveToLocalStorage();
             updateAll();
             if (currentIncidentId == id) window.closeModal();
-            showToastMessage('✓ Incident permanently deleted.', 'delete');
+            showToastMessage('Incident permanently deleted.', 'delete');
             addInternalNotification('Incident Deleted', `"${incident.name}" was permanently deleted`, false);
         } catch (error) {
             console.error('Delete error:', error);
-            showToastMessage('❌ Delete failed: ' + (error.message || 'Unknown error'), 'error');
+            showToastMessage('Delete failed: ' + (error.message || 'Unknown error'), 'error');
             await loadIncidentsFromSupabase();
         }
     };
@@ -1148,13 +1430,13 @@ window.openImageZoom = function(src) {
         cursor: zoom-out;
         padding: 20px;
     `;
-    overlay.innerHTML = `<img src="${src}" style="max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain;"><button style="position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>`;
+    overlay.innerHTML = `<img src="${src}" style="max-width: 100%; max-height: 90vh; border-radius: 12px; object-fit: contain;"><button style="position: absolute; top: 20px; right: 24px; background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">${Icons.close}</button>`;
     overlay.onclick = () => overlay.remove();
     document.body.appendChild(overlay);
 };
 
 // ============ HELPER FUNCTIONS ==========
-function getIcon(cat) { return { security: '⚠️', maintenance: '🔧', janitorial: '🧹', facilities: '🏢' }[cat] || '📋'; }
+function getIcon(cat) { return { security: Icons.security, maintenance: Icons.maintenance, janitorial: Icons.janitorial, facilities: Icons.facilities }[cat] || Icons.maintenance; }
 function getCategoryColor(cat) { return { security: '#DC2626', maintenance: '#2563EB', janitorial: '#1D9E75', facilities: '#D97706' }[cat] || '#6B7280'; }
 function getTimeAgo(date) { const h = Math.floor((Date.now() - new Date(date)) / 3600000); if (h < 1) return 'Just now'; if (h < 24) return `${h}h ago`; return `${Math.floor(h / 24)}d ago`; }
 function escape(t) { if (!t) return ''; return String(t).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
@@ -1191,7 +1473,7 @@ function setupEvents() {
         };
     });
     
-    // ========== IMPROVED LOGOUT WITH CONFIRMATION MODAL ==========
+    // ========== LOGOUT WITH CONFIRMATION MODAL ==========
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         const newLogoutBtn = logoutBtn.cloneNode(true);
@@ -1219,11 +1501,7 @@ function setupEvents() {
             confirmModal.innerHTML = `
                 <div style="background: var(--surface); border-radius: ${isMobile ? '24px' : '28px'}; max-width: 400px; width: ${isMobile ? '100%' : '90%'}; padding: ${isMobile ? '24px' : '28px'}; text-align: center; border: 1px solid var(--border); animation: slideUpModal 0.3s ease;">
                     <div style="width: ${isMobile ? '56px' : '64px'}; height: ${isMobile ? '56px' : '64px'}; background: rgba(245, 158, 11, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto ${isMobile ? '16px' : '20px'};">
-                        <svg width="${isMobile ? '28' : '32'}" height="${isMobile ? '28' : '32'}" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                            <polyline points="16 17 21 12 16 7"/>
-                            <line x1="21" y1="12" x2="9" y2="12"/>
-                        </svg>
+                        ${Icons.logout}
                     </div>
                     <h3 style="font-size: ${isMobile ? '20px' : '22px'}; font-weight: 700; color: var(--text); margin-bottom: ${isMobile ? '8px' : '12px'};">Logout?</h3>
                     <p style="font-size: ${isMobile ? '13px' : '14px'}; color: var(--muted); margin-bottom: ${isMobile ? '24px' : '28px'};">Are you sure you want to logout? You will need to login again to access your account.</p>
@@ -1255,7 +1533,7 @@ function setupEvents() {
                     localStorage.removeItem('currentStudent');
                     localStorage.removeItem('currentAdmin');
                     localStorage.removeItem('isAdminLoggedIn');
-                    showToastMessage('✓ Logged out successfully', 'success');
+                    showToastMessage('Logged out successfully', 'success');
                     setTimeout(() => { window.location.href = '/land.html'; }, 500);
                 }, 500);
             };
@@ -1305,8 +1583,8 @@ document.head.appendChild(styleElem);
 
 // ============ INITIALIZATION ==========
 async function init() {
-    console.log('🚀 Initializing Admin Dashboard...');
-    console.log('📱 Device:', isMobileOrTablet() ? 'Mobile/Tablet' : 'Desktop');
+    console.log('Initializing Admin Dashboard...');
+    console.log('Device:', isMobileOrTablet() ? 'Mobile/Tablet' : 'Desktop');
 
     currentFilter = 'all';
     setTimeout(() => {
@@ -1319,7 +1597,6 @@ async function init() {
     initDarkMode();
     await loadIncidentsFromSupabase();
     setupEvents();
-    startAutoCleanupScheduler();
     setupRealtimeSubscription();
 
     setTimeout(() => { updateAll(); }, 500);
@@ -1345,7 +1622,8 @@ window.testNotification = function () {
         student_id: 'TEST001',
         description: 'This is a test notification',
         timestamp: new Date(),
-        is_anonymous: false
+        is_anonymous: false,
+        is_archived: false
     };
     checkForUrgentReport(testIncident);
     showToastMessage('Test notification sent! Check your notifications.', 'info');

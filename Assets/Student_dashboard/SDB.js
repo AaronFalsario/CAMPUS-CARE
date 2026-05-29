@@ -902,26 +902,73 @@ function createIncidentCard(report) {
     </div>`;
 }
 
+// FIXED: updateStats function - report counting now works correctly
 function updateStats() {
     if (!currentStudent) return;
-    const myReports = allIncidents.filter(inc => String(inc.student_id) === String(currentStudent.studentId));
-    animateCounter('yourReportsCount', myReports.length);
-    animateCounter('inProgressCount', myReports.filter(r => r.status === 'in-progress').length);
-    animateCounter('resolvedCount', myReports.filter(r => r.status === 'resolved').length);
-    animateCounter('totalReportsCount', allIncidents.length);
+    
+    // Get ALL reports for this student (using student_id comparison)
+    const myReports = allIncidents.filter(inc => {
+        // Handle different possible field names
+        const reportStudentId = inc.student_id || inc.studentId || inc.student_id_number;
+        const currentStudentId = currentStudent.studentId || currentStudent.id;
+        return String(reportStudentId) === String(currentStudentId);
+    });
+    
+    // Count my reports by status
+    const myReportsCount = myReports.length;
+    const inProgressCount = myReports.filter(r => r.status === 'in-progress' || r.status === 'in progress').length;
+    const resolvedCount = myReports.filter(r => r.status === 'resolved').length;
+    
+    // Total campus reports (all incidents)
+    const totalReportsCount = allIncidents.length;
+    
+    // Animate the counters
+    animateCounter('yourReportsCount', myReportsCount);
+    animateCounter('inProgressCount', inProgressCount);
+    animateCounter('resolvedCount', resolvedCount);
+    animateCounter('totalReportsCount', totalReportsCount);
+    
+    // Debug logging to verify counts
+    console.log('📊 Stats Updated:', {
+        myReports: myReportsCount,
+        inProgress: inProgressCount,
+        resolved: resolvedCount,
+        totalCampus: totalReportsCount,
+        allIncidentsLength: allIncidents.length,
+        currentStudentId: currentStudent.studentId
+    });
 }
 
 function animateCounter(elementId, targetValue) {
     const element = document.getElementById(elementId);
     if (!element) return;
-    const startValue = parseInt(element.textContent) || 0;
-    if (startValue === targetValue) return;
-    const duration = 500, startTime = performance.now();
+    
+    // Get current value - handle NaN cases
+    let currentValue = parseInt(element.textContent);
+    if (isNaN(currentValue)) currentValue = 0;
+    
+    if (currentValue === targetValue) return;
+    
+    const duration = 500;
+    const startTime = performance.now();
+    const startValue = currentValue;
+    const difference = targetValue - startValue;
+    
     function update(currentTime) {
-        const progress = Math.min((currentTime - startTime) / duration, 1);
-        element.textContent = Math.floor(startValue + (targetValue - startValue) * progress);
-        if (progress < 1) requestAnimationFrame(update);
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Easing function for smooth animation
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const value = Math.floor(startValue + (difference * easeOutQuart));
+        element.textContent = value;
+        
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            element.textContent = targetValue;
+        }
     }
+    
     requestAnimationFrame(update);
 }
 
