@@ -42,7 +42,6 @@ export default defineConfig({
         adminLogin: resolve(__dirname, 'Assets/login/admin/admin.html'),
         studentLogin: resolve(__dirname, 'Assets/login/log.html'),
         reportPage: resolve(__dirname, 'Assets/Student_reporting/report.html'),
-        adminIncidents: resolve(__dirname, 'Assets/Admin_dashboard/incident/incident.html'),
         adminUsers: resolve(__dirname, 'Assets/Admin_dashboard/user_page/user.html'),
         adminSettings: resolve(__dirname, 'Assets/Admin_dashboard/settings/setting.html'),
         studentSettings: resolve(__dirname, 'Assets/Student_dashboard/setting/setting.html'),

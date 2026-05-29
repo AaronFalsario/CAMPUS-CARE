@@ -29,10 +29,6 @@
       "destination": "/Assets/Student_reporting/report.html"
     },
     {
-      "source": "/admin/incidents",
-      "destination": "/Assets/Admin_dashboard/incident/incident.html"
-    },
-    {
       "source": "/admin/users",
       "destination": "/Assets/Admin_dashboard/user_page/user.html"
     },
